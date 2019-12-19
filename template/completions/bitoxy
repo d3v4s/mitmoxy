@@ -7,4 +7,4 @@ _bitoxy_completions() {
   COMPREPLY=($(compgen -W "start version help" -- "${COMP_WORDS[1]}"))
 }
 
-complete -F _chissy_completions bitoxy
+complete -F _bitoxy_completions bitoxy

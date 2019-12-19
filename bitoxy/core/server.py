@@ -6,6 +6,7 @@ class Server:
     __server_socket = None
     __address = None
     __port = None
+    __timeout = 1
 
     def __init__(self, address, port):
         self.__address = address
@@ -69,14 +70,13 @@ class Server:
             # specific port
             port = int((temp[(port_pos + 1):])[:address_pos - port_pos - 1])
             address = temp[:port_pos]
-        # address = socket.gethostbyname_ex(address)[2][0]
         return address, port
 
     # function to read buffer from connection
     def __receive_from(self, conn):
         buffer = b''
-        # set timeout at 2 seconds
-        conn.settimeout(2)
+        # set timeout
+        conn.settimeout(self.__timeout)
 
         # read from socket buffer
         try:
