@@ -1,0 +1,12 @@
+[Unit]
+Description=Bitoxy {version} - Proxy server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={workdir}
+ExecStart=/usr/bin/bitoxy start
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

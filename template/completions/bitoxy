@@ -1,0 +1,10 @@
+# Bitoxy completions script
+
+_bitoxy_completions() {
+  if [ "${#COMP_WORDS[@]}" != "2" ]; then
+    return
+  fi
+  COMPREPLY=($(compgen -W "start version help" -- "${COMP_WORDS[1]}"))
+}
+
+complete -F _bitoxy_completions bitoxy
