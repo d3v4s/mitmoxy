@@ -4,13 +4,15 @@ import threading
 
 class Server:
     __server_socket = None
+    __conf_server = None
     __address = None
     __port = None
     __timeout = 1
 
-    def __init__(self, address, port):
-        self.__address = address
-        self.__port = port
+    def __init__(self, conf_server):
+        self.__conf_server = conf_server
+        self.__address = conf_server['address']
+        self.__port = conf_server['port']
 
     #####################################
     # PRIVATE METHODS
@@ -25,22 +27,6 @@ class Server:
     @staticmethod
     def __resp_handler(buffer):
         return buffer
-
-    # function to print hex dump of buffer
-    @staticmethod
-    def __hex_dump(buffer, length=16):
-        result = []
-        buffer = str(buffer)
-        print(buffer)
-        # bytes char 4 if unicode else 2
-        # digits = 4 if isinstance(buffer, str) else 2
-        for i in range(0, len(buffer), length):
-            row = buffer[i:i+length]
-            hexa = ' '.join(["%0*X" % (4, ord(char)) for char in row])
-            text = ''.join([char if 0x20 <= ord(char) < 0x7F else b'.' for char in row])
-            result.append("%04X\t%-*s\t%s" % (i, length*5, hexa, text))
-
-        print('\n'.join(result))
 
     # function to get remote address and port
     @staticmethod
@@ -71,6 +57,29 @@ class Server:
             port = int((temp[(port_pos + 1):])[:address_pos - port_pos - 1])
             address = temp[:port_pos]
         return address, port
+
+    # function to print hex dump of buffer
+    def __hex_dump(self, buffer, length=16):
+        # return if not print hex dump
+        if not self.__conf_server['print-hex-dump']:
+            return
+
+        # init result and create string buffer
+        result = []
+        buffer = str(buffer)
+        print(buffer)
+        # create hex dump
+        for i in range(0, len(buffer), length):
+            # get row of length specified
+            row = buffer[i:i+length]
+            # create hex
+            hexa = ' '.join(["%0*X" % (4, ord(char)) for char in row])
+            # create text
+            text = ''.join([char if 0x20 <= ord(char) < 0x7F else b'.' for char in row])
+            # append hex and text on result
+            result.append("%04X\t%-*s\t%s" % (i, length*5, hexa, text))
+        # print result
+        print('\n'.join(result))
 
     # function to read buffer from connection
     def __receive_from(self, conn):
@@ -149,12 +158,12 @@ class Server:
                 try:
                     cli_socket.shutdown(socket.SHUT_RDWR)
                     cli_socket.close()
-                except IndexError:
+                except Exception:
                     pass
                 try:
                     remote_socket.shutdown(socket.SHUT_RDWR)
                     remote_socket.close()
-                except IndexError:
+                except Exception:
                     pass
                 print('[*] No more data. Closing connections')
                 print()

@@ -35,7 +35,7 @@ class Controller:
         sys.exit(1)
 
     def __start_server(self):
-        server = Server(self.__conf_server['address'], self.__conf_server['port'])
+        server = Server(self.__conf_server)
         server.start_server()
 
     #####################################
