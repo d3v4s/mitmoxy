@@ -38,7 +38,7 @@ class HttpsServer(Server):
     def _client_negotiation(self, cli_socket):
         cli_address = cli_socket.getpeername()
         logger = Logger(self._conf_log)
-        logger.print('############ START CLIENT NEGOTIATION ############')
+        logger.print('\n############ START CLIENT NEGOTIATION ############')
         while 1:
             # receive data from client
             local_buffer = self._receive_from(cli_socket)
@@ -65,7 +65,7 @@ class HttpsServer(Server):
                 logger.log((self._address, self._port), conf_buff, False)
                 cli_socket.sendall(conf_buff)
 
-                logger.print('############ END CLIENT NEGOTIATION ############')
+                logger.print('############ END CLIENT NEGOTIATION ############\n')
                 return remote_socket, (remote_host, remote_port)
 
     # function to check if client require to close the connection
@@ -75,7 +75,7 @@ class HttpsServer(Server):
         try:
             buff_host, buff_port = self._get_remote_address(buffer)
             if buffer[:7] == 'CONNECT' and buff_host == remote_address[0] and buff_port == remote_address[1]:
-                pos_conn = buffer.find('Connection: ')
+                pos_conn = buffer.find('\nConnection: ')
                 if pos_conn < 0:
                     return False
                 pos_conn += 12
@@ -115,7 +115,7 @@ class HttpsServer(Server):
                     except Exception:
                         pass
 
-                    out = '[*] Exit require from client. Closing connections %s:%d\n' % (cli_host, cli_port)
+                    out = '\n[*] Exit require from client. Closing connections %s:%d\n' % (cli_host, cli_port)
                     out += '############ END CONNECTION ############\n'
                     logger.print(out)
                     break
