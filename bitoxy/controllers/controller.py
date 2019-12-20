@@ -1,6 +1,8 @@
 import sys
+import threading
 
-from bitoxy.core.server import Server
+from bitoxy.core.https_server import HttpsServer
+from bitoxy.core.http_server import HttpServer
 
 
 class Controller:
@@ -8,10 +10,9 @@ class Controller:
     __command = None
     __conf_server = None
     __conf_log = None
-    # __log = None
 
+    # singleton
     def __new__(cls, command=None, conf_server=None, conf_log=None):
-        # singleton
         return object.__new__(cls) if Controller.__instance is None else Controller.__instance
 
     def __init__(self, command=None, conf_server=None, conf_log=None):
@@ -34,9 +35,14 @@ class Controller:
         print('[!!] Show the help with "{name} help"'.format(name=sys.argv[0]))
         sys.exit(1)
 
+    # method to start the servers
     def __start_server(self):
-        server = Server(self.__conf_server)
-        server.start_server()
+        https_server = HttpsServer(self.__conf_server, self.__conf_log)
+        http_server = HttpServer(self.__conf_server, self.__conf_log)
+        https_server_thread = threading.Thread(target=https_server.start_server)
+        http_server_thread = threading.Thread(target=http_server.start_server)
+        https_server_thread.start()
+        http_server_thread.start()
 
     #####################################
     # PUBLIC METHODS

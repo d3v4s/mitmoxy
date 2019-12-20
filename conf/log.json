@@ -1,3 +1,5 @@
 {
-  "log-dir": "log"
+  "log-dir": "log",
+  "hex-dump": true,
+  "print-stdo": true
 }
