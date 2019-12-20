@@ -1,6 +1,9 @@
 # test directory
 test/
 
+# my files
+my.*
+
 # ide directory
 .idea/
 

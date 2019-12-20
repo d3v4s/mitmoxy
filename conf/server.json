@@ -1,6 +1,11 @@
 {
-  "address": "127.0.0.1",
-  "port": 8080,
-  "print-hex-dump": true,
-  "active-log": true
+  "http-address": "0.0.0.0",
+  "http-port": 8080,
+  "https-address": "0.0.0.0",
+  "https-port": 8888,
+  "http-on-https": false,
+  "active-log": true,
+  "cert-file": "conf/key/server.crt",
+  "key-file": "conf/key/server.key",
+  "restart-server": true
 }
