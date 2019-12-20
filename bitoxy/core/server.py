@@ -25,7 +25,7 @@ class Server(ABC):
     _conf_log = None
     _address = None
     _port = None
-    _timeout = 0.1
+    _timeout = 0.2
 
     def __init__(self, conf_server, conf_log):
         self._conf_server = conf_server
@@ -137,7 +137,7 @@ class Server(ABC):
                 out += traceback.format_exc()
             peer = conn.getpeername()
             out += '[!!] Fail receive data from %s:%d\n' % peer
-            out += '[!!] Caught exception: %s' % str(e)
+            out += '[!!] Caught exception: %s\n' % str(e)
             logger.print(out)
         return buffer
 
@@ -173,24 +173,24 @@ class Server(ABC):
             except Exception as e:
                 out = traceback.format_exc()
                 out += '[!!] Fail to listen on %s:%d\n' % (self._address, self._port)
-                out += '[!!] Caught a exception ' + str(e)
+                out += '[!!] Caught a exception %s\n' % str(e)
                 logger.print(out)
                 try:
                     self._server_socket.close()
                 except Exception:
                     pass
                 self._exit_or_restart(self._server_socket)
-                logger.print('\n[*] Restart %s' % self._get_server_name())
+                logger.print('[*] Restart %s\n' % self._get_server_name())
                 continue
 
             # start listen and loop server
-            print('[*] Start %s listen on %s:%d' % (self._get_server_name(), self._address, self._port))
+            logger.print('[*] Start %s listen on %s:%d\n' % (self._get_server_name(), self._address, self._port))
             self._server_socket.listen()
             while 1:
                 try:
                     cli_socket, cli_address = self._server_socket.accept()
                     # print connection info
-                    out = '\n############ START CONNECTION ############\n'
+                    out = '############ START CONNECTION ############\n'
                     out += '[=>] Incoming connection from %s:%d' % cli_address
                     logger.print(out)
 
@@ -206,7 +206,7 @@ class Server(ABC):
                     if not self._bypass_error(e):
                         out += traceback.format_exc()
                         out += '\n'
-                    out += '[!!] Caught a exception on Bitoxy: ' + str(e)
+                    out += '[!!] Caught a exception on Bitoxy: %s\n' % str(e)
                     logger.print(out)
                     try:
                         self._send_400_and_close(cli_socket)
@@ -214,5 +214,5 @@ class Server(ABC):
                         pass
                     self._server_socket.close()
                     self._exit_or_restart(-1)
-                    logger.print('\n[*] Restart %s' % self._get_server_name())
+                    logger.print('[*] Restart %s' % self._get_server_name())
                     break

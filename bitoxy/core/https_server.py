@@ -7,7 +7,7 @@ from bitoxy.core import server
 
 
 class HttpsServer(Server):
-    __max_fails = 10
+    __max_fails = 50
 
     def __init__(self, conf_server, conf_log):
         super(HttpsServer, self).__init__(conf_server, conf_log)
@@ -38,7 +38,7 @@ class HttpsServer(Server):
     def _client_negotiation(self, cli_socket: socket.socket):
         cli_address = cli_socket.getpeername()
         logger = Logger(self._conf_log)
-        logger.print('\n############ START CLIENT NEGOTIATION ############')
+        logger.print('############ START CLIENT NEGOTIATION ############')
         while 1:
             # receive data from client
             local_buffer = self._receive_from(cli_socket)
@@ -84,7 +84,7 @@ class HttpsServer(Server):
                 print(val_conn)
                 return val_conn == 'close'
         except Exception as e:
-            logger.print('[*] Caught a exception while checking of close require: %s' % str(e))
+            logger.print('[*] Caught a exception while checking of close require: %s\n' % str(e))
             return False
 
     # function to manage connection with client
@@ -115,7 +115,7 @@ class HttpsServer(Server):
                     except Exception:
                         pass
 
-                    out = '\n[*] Exit require from client. Closing connections %s:%d\n' % (cli_host, cli_port)
+                    out = '[*] Exit require from client. Closing connections %s:%d\n' % (cli_host, cli_port)
                     out += '############ END CONNECTION ############\n'
                     logger.print(out)
                     break
@@ -147,7 +147,7 @@ class HttpsServer(Server):
                 fail += 1
                 # if fails too many times close connections
                 if fail >= self.__max_fails:
-                    logger.print("[!!] Fails to many times close connection with %s:%d client" % (cli_host, cli_port))
+                    logger.print("[!!] Fails to many times close connection with %s:%d client\n" % (cli_host, cli_port))
                     self._send_400_and_close(cli_socket)
                     try:
                         remote_socket.close()
