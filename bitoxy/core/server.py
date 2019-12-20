@@ -9,12 +9,14 @@ from bitoxy.controllers.logger import Logger
 
 # function to decode the buffer
 def decode_buffer(buffer):
-    try:
-        buffer = buffer.decode(encoding="utf-8")
-    except UnicodeDecodeError:
-        # buffer = buffer.decode(encoding="utf-16")
-        buffer = buffer.decode(encoding="ISO-8859-1")
-    return buffer
+    enc_type = ['utf-8', 'utf-16', 'ascii', 'ISO-8859-1']
+    for enc in enc_type:
+        try:
+            buffer = buffer.decode(encoding=enc, errors='strict')
+            return buffer
+        except UnicodeDecodeError:
+            continue
+    raise Exception('[!!] Encode buffer failed!!!')
 
 
 class Server(ABC):
@@ -108,7 +110,7 @@ class Server(ABC):
             exit(exit_code)
 
     # function to read buffer from connection
-    def _receive_from(self, conn: socket):
+    def _receive_from(self, conn: socket.socket):
         buffer = b''
         # set timeout
         conn.settimeout(self._timeout)
@@ -145,7 +147,7 @@ class Server(ABC):
 
     # function to manage connection with client
     @abstractmethod
-    def _proxy_handler(self, cli_socket: socket):
+    def _proxy_handler(self, cli_socket: socket.socket):
         pass
 
     # method that generate and return the socket

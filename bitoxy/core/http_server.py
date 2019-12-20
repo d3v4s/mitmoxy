@@ -33,7 +33,7 @@ class HttpServer(Server):
         return 'HTTP proxy'
 
     # function to manage connection with client
-    def _proxy_handler(self, cli_socket: socket):
+    def _proxy_handler(self, cli_socket: socket.socket):
         # get host and port of client
         cli_host, cli_port = cli_socket.getpeername()
         # init logger and vars
@@ -48,7 +48,7 @@ class HttpServer(Server):
             # receive data from client
             local_buffer = self._receive_from(cli_socket)
             if len(local_buffer):
-                logger.log((cli_host, cli_port), local_buffer, True)
+                logger.log_buffer((cli_host, cli_port), local_buffer, True)
 
                 # change request with handler
                 local_buffer = self.__req_handler(local_buffer)
@@ -65,7 +65,7 @@ class HttpServer(Server):
                 # receive response from remote
                 remote_buffer = self._receive_from(remote_socket)
                 if len(remote_buffer):
-                    logger.log((remote_host, remote_port), remote_buffer, False)
+                    logger.log_buffer((remote_host, remote_port), remote_buffer, False)
 
                     # change response with handler
                     remote_buffer = self.__resp_handler(remote_buffer)

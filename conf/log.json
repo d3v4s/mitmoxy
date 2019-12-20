@@ -1,5 +1,7 @@
 {
   "log-dir": "log",
   "hex-dump": true,
+  "bytes": true,
+  "content": true,
   "print-stdo": true
 }

@@ -35,7 +35,7 @@ class HttpsServer(Server):
         return 'HTTPS proxy'
 
     # method to manage the negotiation with client
-    def _client_negotiation(self, cli_socket):
+    def _client_negotiation(self, cli_socket: socket.socket):
         cli_address = cli_socket.getpeername()
         logger = Logger(self._conf_log)
         logger.print('\n############ START CLIENT NEGOTIATION ############')
@@ -44,7 +44,7 @@ class HttpsServer(Server):
             local_buffer = self._receive_from(cli_socket)
             if len(local_buffer):
                 # log request
-                logger.log(cli_address, local_buffer, True)
+                logger.log_buffer(cli_address, local_buffer, True)
 
                 # if request type isn't CONNECT send bad request code
                 req_type = server.decode_buffer(local_buffer)[:7]
@@ -62,7 +62,7 @@ class HttpsServer(Server):
                 # send negotiation confirm
                 conf_buff = b'HTTP/1.1 200 OK\r\n\r\n'
                 logger.print('[*] Send confirm negotiation')
-                logger.log((self._address, self._port), conf_buff, False)
+                logger.log_buffer((self._address, self._port), conf_buff, False)
                 cli_socket.sendall(conf_buff)
 
                 logger.print('############ END CLIENT NEGOTIATION ############\n')
@@ -70,9 +70,9 @@ class HttpsServer(Server):
 
     # function to check if client require to close the connection
     def __close_connection(self, buffer, remote_address):
-        buffer = server.decode_buffer(buffer)
         logger = Logger(self._conf_log)
         try:
+            buffer = server.decode_buffer(buffer)
             buff_host, buff_port = self._get_remote_address(buffer)
             if buffer[:7] == 'CONNECT' and buff_host == remote_address[0] and buff_port == remote_address[1]:
                 pos_conn = buffer.find('\nConnection: ')
@@ -88,7 +88,7 @@ class HttpsServer(Server):
             return False
 
     # function to manage connection with client
-    def _proxy_handler(self, cli_socket: socket):
+    def _proxy_handler(self, cli_socket: socket.socket):
         cli_host, cli_port = cli_socket.getpeername()
         # negotiation with client
         remote_socket, remote_address = self._client_negotiation(cli_socket)
@@ -121,7 +121,7 @@ class HttpsServer(Server):
                     break
 
                 # log buffer
-                logger.log((cli_host, cli_port), local_buffer, True)
+                logger.log_buffer((cli_host, cli_port), local_buffer, True)
 
                 # change request with handler
                 local_buffer = self.__req_handler(local_buffer)
@@ -135,7 +135,7 @@ class HttpsServer(Server):
             if len(remote_buffer):
                 fail = 0
                 # log buffer
-                logger.log(remote_address, remote_buffer, False)
+                logger.log_buffer(remote_address, remote_buffer, False)
                 # change response with handler
                 remote_buffer = self.__resp_handler(remote_buffer)
                 # send response to client

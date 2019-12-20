@@ -1,9 +1,12 @@
+import traceback
+from datetime import datetime
 from time import sleep
 
 
 class Logger:
     __instance = None
     __conf_log = None
+    __lock_timeout = 3
     __lock = False
 
     # singleton
@@ -20,22 +23,22 @@ class Logger:
     # PRIVATE METHODS
     #####################################
 
-    # function to print hex dump of buffer
+    # function to print out in stdo
+    def __stdo_print(self, out):
+        if self.__conf_log['print-stdo']:
+            print("[%s]" % datetime.now())
+            print(out)
+
+    # function to get hex dump of buffer
     def __hex_dump(self, buffer, length=16):
-        # return if not print hex dump
+        # return if not hex dump require
         if not self.__conf_log['hex-dump']:
-            return
+            return ''
 
         # init result and decode buffer
         from bitoxy.core import server
-        result = []
         buffer = server.decode_buffer(buffer)
-        print()
-        print('############ START CONTENT ############')
-        print(buffer)
-        print('############ END CONTENT ############')
-        print()
-        print('############ HEX-DUMP ############')
+        result = ['', '############ START HEX-DUMP ############']
         # create hex dump
         for i in range(0, len(buffer), length):
             # get row of length specified
@@ -46,10 +49,37 @@ class Logger:
             text = ''.join([char if 0x20 <= ord(char) < 0x7F else '.' for char in row])
             # append hex and text on result
             result.append("%04X\t%-*s\t%s" % (i, length * 5, hexa, text))
-        # print result
-        result = '\n'.join(result)
-        print(result)
-        return result
+        result.append('############ END HEX-DUMP ############')
+        result.append('')
+        return '\n'.join(result)
+
+    # function to get bytes of buffer
+    def __bytes(self, buffer):
+        if not self.__conf_log['bytes']:
+            return ''
+        res = [
+            '',
+            '############ START BYTES ############',
+            ':'.join("{:02x}".format(x) for x in buffer),
+            '############ END BYTES ############',
+            ''
+        ]
+        return '\n'.join(res)
+
+    # function to get contents of buffer
+    def __contents(self, buffer):
+        if not self.__conf_log['content']:
+            return ''
+        from bitoxy.core import server
+        buffer = server.decode_buffer(buffer)
+        res = [
+            '',
+            '############ START CONTENT ############',
+            buffer,
+            '############ END CONTENT ############',
+            ''
+        ]
+        return '\n'.join(res)
 
     # method to save the logs
     def __save_log_address(self, from_address, log):
@@ -59,7 +89,7 @@ class Logger:
         pass
 
     # function to try lock
-    def __try_lock(self, timeout=None):
+    def __try_lock(self):
         while 1:
             # try to lock
             if not self.__lock:
@@ -78,23 +108,37 @@ class Logger:
 
     # function to log the buffer
     # implement a lock
-    def log(self, from_address, buffer, is_cli):
+    def log_buffer(self, from_address, buffer: bytes, is_cli):
         if self.__try_lock():
-            print('[%s] Received %d bytes from %s:%d' % (
-                "=>" if is_cli else "<=",
-                len(buffer),
-                from_address[0],
-                from_address[1]
-            ))
-            # print hex dump
-            hex_dump = self.__hex_dump(buffer)
-            self.__save_log_address(from_address, hex_dump)
-            self._unlock()
+            try:
+                self.__stdo_print('[%s] Received %d bytes from %s:%d' % (
+                    "=>" if is_cli else "<=",
+                    len(buffer),
+                    from_address[0],
+                    from_address[1]
+                ))
+                # print hex dump
+                out = self.__bytes(buffer)
+                out += self.__contents(buffer)
+                out += self.__hex_dump(buffer)
+                self.__stdo_print(out)
+                self.__save_log_address(from_address, out)
+            except Exception as e:
+                print(traceback.format_exc())
+                print("[!!] Caught a exception while execute buffer logging: %s" % str(e))
+            finally:
+                self._unlock()
 
-    # function to check if print in stdo (standard output)
-    # is enable, and write the log
-    def print(self, content):
+    # function to check if print in
+    # stdo (standard output) is enable,
+    # and write the log
+    def print(self, content: str):
         if self.__try_lock():
-            print(content)
-            self.__save_log(content)
-            self._unlock()
+            try:
+                self.__stdo_print(content)
+                self.__save_log(content)
+            except Exception as e:
+                print(traceback.format_exc())
+                print("[!!] Caught a exception while logging : %s" % str(e))
+            finally:
+                self._unlock()
