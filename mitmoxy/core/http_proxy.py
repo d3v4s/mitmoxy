@@ -1,14 +1,13 @@
 import socket
-import ssl
 
-from bitoxy.controllers.logger import Logger
-from bitoxy.core.server import Server
+from mitmoxy.controllers.logger import Logger
+from mitmoxy.core.proxy import Proxy
 
 
-class HttpServer(Server):
+class HttpProxy(Proxy):
 
     def __init__(self, conf_server, conf_log):
-        super(HttpServer, self).__init__(conf_server, conf_log)
+        super(HttpProxy, self).__init__(conf_server, conf_log)
         self._address = self._conf_server['http-address']
         self._port = self._conf_server['http-port']
 
@@ -16,12 +15,12 @@ class HttpServer(Server):
     # PRIVATE METHODS
     #####################################
 
-    # handle to change a request
-    def __req_handler(self, buffer: bytes):
+    # handler to change a request
+    def __req_handler(self, buffer: bytes) -> bytes:
         return buffer
 
-    # handle to change a response
-    def __resp_handler(self, buffer: bytes):
+    # handler to change a response
+    def __resp_handler(self, buffer: bytes) -> bytes:
         return buffer
 
     #####################################
@@ -84,20 +83,7 @@ class HttpServer(Server):
                     remote_socket.close()
                 except Exception:
                     pass
-                out = '[*] No more data. Closing connections %s:%d\n' % (cli_host, cli_port)
+                out = '[*] No more data. Closing connection with client %s:%d\n' % (cli_host, cli_port)
                 out += '############ END CONNECTION ############\n'
                 logger.print(out)
                 break
-
-    # method that generate and return the socket
-    def _create_socket(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-        sock.bind((self._address, self._port))
-        if self._conf_server['http-on-https']:
-            return ssl.wrap_socket(
-                sock,
-                server_side=True,
-                certfile=self._conf_server['cert-file'],
-                keyfile=self._conf_server['key-file']
-            )
-        return sock

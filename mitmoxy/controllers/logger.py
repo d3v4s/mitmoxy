@@ -8,6 +8,7 @@ class Logger:
     __conf_log = None
     __lock_timeout = 3
     __lock = False
+    __dec_buffer = None
 
     # singleton
     def __new__(cls, conf_log=None):
@@ -30,14 +31,13 @@ class Logger:
             print(out)
 
     # function to get hex dump of buffer
-    def __hex_dump(self, buffer, length=16):
+    def __hex_dump(self, length=16) -> str:
         # return if not hex dump require
         if not self.__conf_log['hex-dump']:
             return ''
 
         # init result and decode buffer
-        from bitoxy.core import server
-        buffer = server.decode_buffer(buffer)
+        buffer = self.__dec_buffer
         result = ['', '############ START HEX-DUMP ############']
         # create hex dump
         for i in range(0, len(buffer), length):
@@ -54,7 +54,7 @@ class Logger:
         return '\n'.join(result)
 
     # function to get bytes of buffer
-    def __bytes(self, buffer):
+    def __bytes(self, buffer: bytes) -> str:
         if not self.__conf_log['bytes']:
             return ''
         res = [
@@ -67,15 +67,17 @@ class Logger:
         return '\n'.join(res)
 
     # function to get contents of buffer
-    def __contents(self, buffer):
+    def __contents(self) -> str:
         if not self.__conf_log['content']:
             return ''
-        from bitoxy.core import server
-        buffer = server.decode_buffer(buffer)
+
+        # buffer = server.decode_buffer(buffer)
+        # buffer =
         res = [
             '',
             '############ START CONTENT ############',
-            buffer,
+            ''.join([char if 0x20 <= ord(char) < 0x7F or ord(char) == 0x0A or ord(char) == 0x0D else '.'
+                     for char in self.__dec_buffer]),
             '############ END CONTENT ############',
             ''
         ]
@@ -89,7 +91,7 @@ class Logger:
         pass
 
     # function to try lock
-    def __try_lock(self):
+    def __try_lock(self) -> bool:
         while 1:
             # try to lock
             if not self.__lock:
@@ -117,21 +119,26 @@ class Logger:
                     from_address[0],
                     from_address[1]
                 ))
-                # print hex dump
+                from mitmoxy.core import server
+                self.__dec_buffer = server.decode_buffer(buffer)
+                # get bytes
                 out = self.__bytes(buffer)
-                out += self.__contents(buffer)
-                out += self.__hex_dump(buffer)
+                # get content
+                out += self.__contents()
+                # get hex dump
+                out += self.__hex_dump()
+                # print in stdo and log it
                 self.__stdo_print(out)
                 self.__save_log_address(from_address, out)
             except Exception as e:
                 print(traceback.format_exc())
-                print("[!!] Caught a exception while execute buffer logging: %s" % str(e))
+                print("[!!] An exception was caught while running buffer logging: %s" % str(e))
             finally:
                 self._unlock()
 
     # function to check if print in
     # stdo (standard output) is enable,
-    # and write the log
+    # and write on log
     def print(self, content: str):
         if self.__try_lock():
             try:
@@ -139,6 +146,18 @@ class Logger:
                 self.__save_log(content)
             except Exception as e:
                 print(traceback.format_exc())
-                print("[!!] Caught a exception while logging : %s" % str(e))
+                print("[!!] Caught an exception while logging: %s" % str(e))
+            finally:
+                self._unlock()
+
+    # function to print error on stdo and write on log
+    def print_err(self, err: str):
+        if self.__try_lock():
+            try:
+                print(err)
+                self.__save_log(err)
+            except Exception as e:
+                print(traceback.format_exc())
+                print("[!!] Caught an exception while logging the error: %s" % str(e))
             finally:
                 self._unlock()

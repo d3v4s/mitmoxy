@@ -2,9 +2,9 @@
 
 import sys
 import json
-import bitoxy
+import mitmoxy
 
-from bitoxy.controllers.controller import Controller
+from mitmoxy.controllers.controller import Controller
 
 helpers = """
 Bitoxy {version} -- Proxy Server
@@ -29,7 +29,7 @@ Examples:
 
 """
 
-helpers = helpers.format(name=sys.argv[0], version=bitoxy.__version__, author=bitoxy.__author__)
+helpers = helpers.format(name=sys.argv[0], version=mitmoxy.__version__, author=mitmoxy.__author__)
 
 
 # function to show help
@@ -41,7 +41,7 @@ def show_help():
 # function to show Bitoxy version
 def show_version():
     print('Bitoxy {version} - Proxy server - Developed by {author}'.
-          format(version=bitoxy.__version__, author=bitoxy.__author__))
+          format(version=mitmoxy.__version__, author=mitmoxy.__author__))
     sys.exit(0)
 
 

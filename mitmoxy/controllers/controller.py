@@ -1,8 +1,8 @@
 import sys
 import threading
 
-from bitoxy.core.https_server import HttpsServer
-from bitoxy.core.http_server import HttpServer
+from mitmoxy.core.ssl_proxy import SslProxy
+from mitmoxy.core.http_proxy import HttpProxy
 
 
 class Controller:
@@ -37,11 +37,11 @@ class Controller:
 
     # method to start the servers
     def __start_server(self):
-        https_server = HttpsServer(self.__conf_server, self.__conf_log)
-        http_server = HttpServer(self.__conf_server, self.__conf_log)
-        https_server_thread = threading.Thread(target=https_server.start_server)
+        ssl_server = SslProxy(self.__conf_server, self.__conf_log)
+        http_server = HttpProxy(self.__conf_server, self.__conf_log)
+        ssl_server_thread = threading.Thread(target=ssl_server.start_server)
         http_server_thread = threading.Thread(target=http_server.start_server)
-        https_server_thread.start()
+        ssl_server_thread.start()
         http_server_thread.start()
 
     #####################################
