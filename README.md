@@ -10,4 +10,4 @@ To run the proxies, execute:
 `./mitmoxy.py start`
 
 Test it with curl:  
-`https_proxy=localhost:8888 http_proxy=localhost:8080 curl https://devas.info --cacert conf/key/chain.crt`
+`https_proxy=localhost:8888 http_proxy=localhost:8080 curl https://devas.info --cacert conf/key/ca.crt`
