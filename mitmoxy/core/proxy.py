@@ -3,7 +3,6 @@ import socket
 import threading
 import traceback
 
-from ssl import Purpose
 from abc import abstractmethod, ABC
 from .server import Server, decode_buffer
 
@@ -18,27 +17,29 @@ class Proxy(Server, ABC):
 
     # function to get remote socket
     @staticmethod
-    def _get_remote_socket(address: tuple, force_ssl=False):
-        host, port = address
+    def _get_remote_socket(address: tuple, ssl_wrap=False):
+        # host, port = address
         # create socket
+        print("ADDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD: %s:%d" % address)
         remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # if is HTTPS port or force it, then create ssl socket
-        # if port == '443' or force_ssl:
-        #     # create ssl context
-        #     context = ssl.create_default_context()  # ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        #     # context.load_verify_locations(self._conf_server['cert-chain-file'])
-        #     context.load_default_certs(purpose=Purpose.SERVER_AUTH)
-        #     # connect to remote
-        #     remote_socket = socket.create_connection(address)
-        #     # wrap socket on ssl context and return it
-        #     return context.wrap_socket(remote_socket, server_hostname=address[0])
+        # if ssl_wrap is true, then create ssl socket
+        if ssl_wrap:
+            # create ssl context
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_default_certs(purpose=ssl.Purpose.SERVER_AUTH)
+            # connect to remote
+            # remote_socket = socket.create_connection(address)
+            remote_socket.connect(address)
+            # wrap socket on ssl context and return it
+            return context.wrap_socket(remote_socket, server_hostname=address[0])
+
         # else connect to remote and return the socket
         remote_socket.connect(address)
         return remote_socket
 
     # function to get remote address and port
     @staticmethod
-    def _get_remote_address(request) -> tuple:
+    def _get_remote_address(request, def_port=80) -> tuple:
         # convert binary to string
         request = decode_buffer(request) if isinstance(request, bytes) else request
         # get url
@@ -58,18 +59,13 @@ class Proxy(Server, ABC):
 
         if port_pos == -1 or address_pos < port_pos:
             # default port
-            port = 80
+            port = def_port
             address = temp[:address_pos]
         else:
             # specific port
             port = int((temp[(port_pos + 1):])[:address_pos - port_pos - 1])
             address = temp[:port_pos]
         return address, port
-
-    #####################################
-    # PROTECTED METHODS
-    #####################################
-
 
     #####################################
     # ABSTRACT METHODS
@@ -107,7 +103,7 @@ class Proxy(Server, ABC):
 
             # start listen and loop server
             logger.print('[*] Start %s listen on %s:%d\n' % (self._get_server_name(), self._address, self._port))
-            self._server_socket.listen()
+            self._server_socket.listen(5)
             while 1:
                 try:
                     cli_socket, (cli_address, cli_port) = self._server_socket.accept()

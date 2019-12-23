@@ -29,7 +29,7 @@ class HttpProxy(Proxy):
 
     # method to get server name
     def _get_server_name(self):
-        return 'HTTP proxy'
+        return 'HTTP Proxy'
 
     # function to manage connection with client
     def _proxy_handler(self, cli_socket: socket.socket):
@@ -38,8 +38,7 @@ class HttpProxy(Proxy):
         # init logger and vars
         logger = Logger(self._conf_log)
         remote_socket = None
-        remote_host = None
-        remote_port = None
+        remote_address = None
         remote_buffer = ''
         # loop to route requests and responses
         # between client and remote host
@@ -52,19 +51,27 @@ class HttpProxy(Proxy):
                 # change request with handler
                 local_buffer = self.__req_handler(local_buffer)
 
-                # get host and port remote
-                remote_host, remote_port = self._get_remote_address(local_buffer)
+                # get host and port remote and create socket
+                new_addr = self._get_remote_address(local_buffer)
+                if not (remote_address[0] == new_addr[0] and remote_address[1] == new_addr[1])\
+                        or remote_address is None:
+                    # close old socket for new connection
+                    try:
+                        remote_socket.close()
+                    except Exception:
+                        pass
+                    remote_address = new_addr
+                    remote_socket = self._get_remote_socket(remote_address)
 
             # send data at remote host
-            if remote_host is not None:
-                logger.print('[=>] Sent request to %s:%d' % (remote_host, remote_port))
-                remote_socket = self._get_remote_socket((remote_host, remote_port))
+            if remote_socket is not None:
+                # logger.print('[=>] Sent request to %s:%d' % (remote_host, remote_port))
                 remote_socket.sendall(local_buffer)
 
                 # receive response from remote
                 remote_buffer = self._receive_from(remote_socket)
                 if len(remote_buffer):
-                    logger.log_buffer((remote_host, remote_port), remote_buffer, False)
+                    logger.log_buffer(remote_address, remote_buffer, False)
 
                     # change response with handler
                     remote_buffer = self.__resp_handler(remote_buffer)

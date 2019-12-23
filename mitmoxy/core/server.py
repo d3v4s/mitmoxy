@@ -24,7 +24,7 @@ class Server(ABC):
     _conf_log = None
     _address = None
     _port = None
-    _timeout = 0.5
+    _timeout = 0.1
 
     def __init__(self, conf_server, conf_log):
         self._conf_server = conf_server
@@ -94,7 +94,8 @@ class Server(ABC):
         # set timeout
         conn.settimeout(self._timeout)
         logger = Logger(self._conf_log)
-
+        peer = conn.getpeername()[:2]
+        logger.print("[*] Start receive from %s:%d" % peer)
         # read from socket buffer
         try:
             while 1:
@@ -115,8 +116,13 @@ class Server(ABC):
             out = ''
             if not self._bypass_error(e):
                 out += traceback.format_exc()
-            peer = conn.getpeername()
-            out += '[!!] Fail receive data from %s:%d\n' % peer
+            out += '[!!] Fail receive data'
+            try:
+                peer = conn.getpeername()[:2]
+                out += 'from %s:%d\n' % peer
+            except Exception:
+                out += '\n'
+
             out += '[!!] Caught an exception: %s\n' % str(e)
             logger.print(out)
         return buffer
