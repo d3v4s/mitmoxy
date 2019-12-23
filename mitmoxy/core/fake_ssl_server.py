@@ -1,4 +1,3 @@
-import socket
 import ssl
 
 from mitmoxy.controllers.logger import Logger
@@ -6,7 +5,6 @@ from .proxy import Proxy, decode_buffer
 
 
 class FakeSslServer(Proxy):
-    __max_fails = 50
 
     def __init__(self, conf_server, conf_log):
         super(FakeSslServer, self).__init__(conf_server, conf_log)
@@ -30,7 +28,7 @@ class FakeSslServer(Proxy):
                 url = row.split(' ')[1]
                 url = url.strip(" ")
                 url = url.strip('\r\n')
-
+                break
 
         if url is None:
             raise Exception("Error while get remote address from request")
@@ -104,6 +102,15 @@ class FakeSslServer(Proxy):
         while 1:
             # receive data from client
             local_buffer = self._receive_from(cli_socket)
+
+            # if client is disconnect close connection and return
+            if isinstance(local_buffer, bool) and not local_buffer:
+                try:
+                    cli_socket.close()
+                except Exception:
+                    pass
+                return
+
             # if receive data from client
             if len(local_buffer):
                 fail = 0
@@ -122,6 +129,18 @@ class FakeSslServer(Proxy):
 
             # receive response from remote
             remote_buffer = self._receive_from(remote_socket)
+
+            # if remote is disconnect close connection and return
+            if isinstance(remote_buffer, bool) and not remote_buffer:
+                try:
+                    remote_socket.close()
+                except Exception:
+                    pass
+                out = "[!!] Remote %s:%d is disconnected\n" % remote_address
+                out += "'############ END CONNECTION ############\n'"
+                logger.print(out)
+                return
+
             # if receive data from remote
             if len(remote_buffer):
                 fail = 0
@@ -138,7 +157,7 @@ class FakeSslServer(Proxy):
             if not (len(local_buffer) or len(remote_buffer)):
                 fail += 1
                 # if fails too many times close connections
-                if fail >= self.__max_fails:
+                if fail >= self._max_fails:
                     out = "[!!] Fails to many times!!! Close connection with %s:%d client\n" % (cli_host, cli_port)
                     out += '############ END CONNECTION ############\n'
                     logger.print(out)

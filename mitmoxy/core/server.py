@@ -45,10 +45,13 @@ class Server(ABC):
         if e.args[0] == 'The read operation timed out' or e.args[0] == 'timed out':
             return True
 
-        # bypass ssl exceptions
-        if len(e.args) >= 2 and (e.args[1] == '[SSL: HTTPS_PROXY_REQUEST] https proxy request (_ssl.c:1076)' or
+        # bypass ssl exceptions and endpoint not connected
+        if len(e.args) >= 2 and (e.args[1] == '[SSL: SSLV3_ALERT_BAD_CERTIFICATE] sslv3 alert bad certificate '
+                                              '(_ssl.c:1076)' or
                                  e.args[1] == '[SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1076)' or
-                                 e.args[1] == '[SSL: HTTP_REQUEST] http request (_ssl.c:1076)'):
+                                 e.args[1] == '[SSL: HTTPS_PROXY_REQUEST] https proxy request (_ssl.c:1076)' or
+                                 e.args[1] == '[SSL: HTTP_REQUEST] http request (_ssl.c:1076)' or
+                                 e.args[1] == 'Transport endpoint is not connected'):
             return True
 
         return False
@@ -89,15 +92,15 @@ class Server(ABC):
         return sock
 
     # function to read buffer from connection
-    def _receive_from(self, conn: socket.socket, chunk_size=2048) -> bytes:
+    def _receive_from(self, conn: socket.socket, chunk_size=2048):
         buffer = b''
         # set timeout
         conn.settimeout(self._timeout)
         logger = Logger(self._conf_log)
-        peer = conn.getpeername()[:2]
-        logger.print("[*] Start receive from %s:%d" % peer)
         # read from socket buffer
         try:
+            peer = conn.getpeername()[:2]
+            logger.print("[*] Start receive from %s:%d" % peer)
             while 1:
                 data = conn.recv(chunk_size)
                 if not data:
@@ -125,6 +128,9 @@ class Server(ABC):
 
             out += '[!!] Caught an exception: %s\n' % str(e)
             logger.print(out)
+            # if endpoint is disconnected return false
+            if len(e.args) >= 2 and e.args[1] == 'Transport endpoint is not connected':
+                return False
         return buffer
 
     #####################################
