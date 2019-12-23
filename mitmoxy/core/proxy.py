@@ -10,6 +10,7 @@ from mitmoxy.controllers.logger import Logger
 
 
 class Proxy(Server, ABC):
+    _max_fails = 10
 
     #####################################
     # STATIC PROTECTED METHODS
@@ -20,7 +21,6 @@ class Proxy(Server, ABC):
     def _get_remote_socket(address: tuple, ssl_wrap=False):
         # host, port = address
         # create socket
-        print("ADDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD: %s:%d" % address)
         remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # if ssl_wrap is true, then create ssl socket
         if ssl_wrap:

@@ -45,6 +45,18 @@ class HttpProxy(Proxy):
         while 1:
             # receive data from client
             local_buffer = self._receive_from(cli_socket)
+
+            # if client is disconnect close connection and return
+            if isinstance(local_buffer, bool) and not local_buffer:
+                try:
+                    cli_socket.close()
+                except Exception:
+                    pass
+                out = "[!!] Client %s:%d is disconnected\n" % (cli_host, cli_port)
+                out += "'############ END CONNECTION ############\n'"
+                logger.print(out)
+                return
+
             if len(local_buffer):
                 logger.log_buffer((cli_host, cli_port), local_buffer, True)
 
@@ -70,6 +82,19 @@ class HttpProxy(Proxy):
 
                 # receive response from remote
                 remote_buffer = self._receive_from(remote_socket)
+
+                # if remote is disconnect close connection and return
+                if isinstance(remote_buffer, bool) and not remote_buffer:
+                    try:
+                        remote_socket.close()
+                    except Exception:
+                        pass
+                    out = "[!!] Remote %s:%d is disconnected\n" % remote_address
+                    out += "'############ END CONNECTION ############\n'"
+                    logger.print(out)
+                    return
+
+                # if have data from remote log it and send response to client
                 if len(remote_buffer):
                     logger.log_buffer(remote_address, remote_buffer, False)
 

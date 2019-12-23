@@ -1,5 +1,4 @@
 import socket
-import ssl
 from threading import Thread
 
 from mitmoxy.controllers.logger import Logger
@@ -8,7 +7,6 @@ from .proxy import Proxy, decode_buffer
 
 
 class SslProxy(Proxy):
-    __max_fails = 50
     __fake_server_address = None
 
     def __init__(self, conf_server, conf_log):
@@ -93,9 +91,6 @@ class SslProxy(Proxy):
     #     res += buffer[host_pos + len(rem_host_enc):-(len(rem_port_enc)+1)]
     #     return res
 
-
-
-
     #     cli_address = cli_socket.getpeername()
     #     logger = Logger(self._conf_log)
     #     # logger.print('############ START CLIENT NEGOTIATION ############')
@@ -154,7 +149,7 @@ class SslProxy(Proxy):
         return 'SSL Proxy'
 
     # method to manage the negotiation with client
-    def _client_negotiation(self, cli_socket: socket.socket) -> tuple:
+    def _client_negotiation(self, cli_socket: socket.socket) -> socket.socket:
         cli_address = cli_socket.getpeername()
         logger = Logger(self._conf_log)
         logger.print('############ START CLIENT NEGOTIATION ############')
@@ -163,6 +158,18 @@ class SslProxy(Proxy):
         while 1:
             # receive data from client
             local_buffer = self._receive_from(cli_socket, 32)
+
+            # if client is disconnect close connection and return
+            if isinstance(local_buffer, bool) and not local_buffer:
+                try:
+                    cli_socket.close()
+                except Exception:
+                    pass
+                out = "[!!] Client %s:%d is disconnected\n" % cli_address
+                out += "'############ END CONNECTION ############\n'"
+                logger.print(out)
+                raise Exception("Client disconnected")
+
             if len(local_buffer):
                 # log request
                 logger.log_buffer(cli_address, local_buffer, True)
@@ -177,7 +184,7 @@ class SslProxy(Proxy):
                 local_buffer = self.__req_handler(local_buffer)
 
                 # get host and port remote
-                remote_address = self._get_remote_address(local_buffer)
+                # remote_address = self._get_remote_address(local_buffer)
                 # self.__send_address_at_fake(fake_server_socket, remote_address[0], remote_address[1])
 
                 # # close socket if is init
@@ -193,19 +200,18 @@ class SslProxy(Proxy):
                 cli_socket.sendall(conf_buff)
 
                 logger.print('############ END CLIENT NEGOTIATION ############\n')
-                return fake_server_socket, remote_address
+                return fake_server_socket   # , remote_address
             # increment fails and check max
             fail += 1
-            if fail >= self.__max_fails:
+            if fail >= self._max_fails:
                 raise Exception("Error while negotiation with the client. Too many fails!!!")
 
     # function to manage connection with client
     def _proxy_handler(self, cli_socket: socket.socket):
         cli_host, cli_port = cli_socket.getpeername()
         # negotiation with client
-        fake_ssl_server_socket, remote_address = self._client_negotiation(cli_socket)
-        remote_host, remote_port = remote_address
-        # send mitmoxy head
+        fake_ssl_server_socket = self._client_negotiation(cli_socket)
+        # remote_host, remote_port = remote_address
 
         # init the logger
         logger = Logger(self._conf_log)
@@ -216,6 +222,18 @@ class SslProxy(Proxy):
         while 1:
             # receive data from client
             local_buffer = self._receive_from(cli_socket)
+
+            # if client is disconnect close connection and return
+            if isinstance(local_buffer, bool) and not local_buffer:
+                try:
+                    cli_socket.close()
+                except Exception:
+                    pass
+                out = "[!!] Client %s:%d is disconnected\n" % (cli_host, cli_port)
+                out += "'############ END CONNECTION ############\n'"
+                logger.print(out)
+                return
+
             if len(local_buffer):
                 fail = 0
                 # # check if client require to exit
@@ -246,6 +264,18 @@ class SslProxy(Proxy):
 
             # receive response from remote
             remote_buffer = self._receive_from(fake_ssl_server_socket)
+
+            # if remote is disconnect close connection and return
+            if isinstance(remote_buffer, bool) and not remote_buffer:
+                try:
+                    fake_ssl_server_socket.close()
+                except Exception:
+                    pass
+                out = "[!!] Fake server is disconnected\n"
+                out += "'############ END CONNECTION ############\n'"
+                logger.print(out)
+                return
+
             if len(remote_buffer):
                 fail = 0
 
@@ -261,7 +291,7 @@ class SslProxy(Proxy):
             if not (len(local_buffer) or len(remote_buffer)):
                 fail += 1
                 # if fails too many times close connections
-                if fail >= self.__max_fails:
+                if fail >= self._max_fails:
                     out = "[!!] Fails to many times!!! Close connection with %s:%d client\n" % (cli_host, cli_port)
                     out += '############ END CONNECTION ############\n'
                     logger.print(out)
