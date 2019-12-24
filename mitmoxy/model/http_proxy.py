@@ -1,13 +1,13 @@
 import socket
 
 from mitmoxy.controllers.logger import Logger
-from mitmoxy.core.proxy import Proxy
+from mitmoxy.model.proxy import Proxy
 
 
 class HttpProxy(Proxy):
 
-    def __init__(self, conf_server, conf_log):
-        super(HttpProxy, self).__init__(conf_server, conf_log)
+    def __init__(self, logger: Logger, conf_server):
+        super(HttpProxy, self).__init__(logger, conf_server)
         self._address = self._conf_server['http-address']
         self._port = self._conf_server['http-port']
 
@@ -28,7 +28,7 @@ class HttpProxy(Proxy):
     #####################################
 
     # method to get server name
-    def _get_server_name(self):
+    def _get_server_name(self) -> str:
         return 'HTTP Proxy'
 
     # function to manage connection with client
@@ -36,7 +36,7 @@ class HttpProxy(Proxy):
         # get host and port of client
         cli_host, cli_port = cli_socket.getpeername()
         # init logger and vars
-        logger = Logger(self._conf_log)
+        # logger = Logger(self._conf_log)
         remote_socket = None
         remote_address = None
         remote_buffer = ''
@@ -48,17 +48,15 @@ class HttpProxy(Proxy):
 
             # if client is disconnect close connection and return
             if isinstance(local_buffer, bool) and not local_buffer:
-                try:
-                    cli_socket.close()
-                except Exception:
-                    pass
+                self._close_socket_pass_exc(cli_socket)
+                self._close_socket_pass_exc(remote_socket)
                 out = "[!!] Client %s:%d is disconnected\n" % (cli_host, cli_port)
-                out += "'############ END CONNECTION ############\n'"
-                logger.print(out)
+                out += '############ END CONNECTION ############\n'
+                self._logger.print(out)
                 return
 
             if len(local_buffer):
-                logger.log_buffer((cli_host, cli_port), local_buffer, True)
+                self._logger.log_buffer((cli_host, cli_port), local_buffer, True)
 
                 # change request with handler
                 local_buffer = self.__req_handler(local_buffer)
@@ -68,10 +66,7 @@ class HttpProxy(Proxy):
                 if not (remote_address[0] == new_addr[0] and remote_address[1] == new_addr[1])\
                         or remote_address is None:
                     # close old socket for new connection
-                    try:
-                        remote_socket.close()
-                    except Exception:
-                        pass
+                    self._close_socket_pass_exc(remote_socket)
                     remote_address = new_addr
                     remote_socket = self._get_remote_socket(remote_address)
 
@@ -85,37 +80,29 @@ class HttpProxy(Proxy):
 
                 # if remote is disconnect close connection and return
                 if isinstance(remote_buffer, bool) and not remote_buffer:
-                    try:
-                        remote_socket.close()
-                    except Exception:
-                        pass
-                    out = "[!!] Remote %s:%d is disconnected\n" % remote_address
-                    out += "'############ END CONNECTION ############\n'"
-                    logger.print(out)
+                    self._close_socket_pass_exc(cli_socket)
+                    self._close_socket_pass_exc(remote_socket)
+                    out = "[!!] Remote %s:%d is disconnected\n" % remote_address[:2]
+                    out += '############ END CONNECTION ############\n'
+                    self._logger.print(out)
                     return
 
                 # if have data from remote log it and send response to client
                 if len(remote_buffer):
-                    logger.log_buffer(remote_address, remote_buffer, False)
+                    self._logger.log_buffer(remote_address, remote_buffer, False)
 
                     # change response with handler
                     remote_buffer = self.__resp_handler(remote_buffer)
 
                     # send response to client
-                    logger.print('[<=] Send response to %s:%d' % (cli_host, cli_port))
+                    self._logger.print('[<=] Send response to %s:%d' % (cli_host, cli_port))
                     cli_socket.sendall(remote_buffer)
 
             # if there are no other data close the connections
             if not (len(remote_buffer) or len(local_buffer)):
-                try:
-                    cli_socket.close()
-                except Exception:
-                    pass
-                try:
-                    remote_socket.close()
-                except Exception:
-                    pass
+                self._close_socket_pass_exc(cli_socket)
+                self._close_socket_pass_exc(remote_socket)
                 out = '[*] No more data. Closing connection with client %s:%d\n' % (cli_host, cli_port)
                 out += '############ END CONNECTION ############\n'
-                logger.print(out)
+                self._logger.print(out)
                 break

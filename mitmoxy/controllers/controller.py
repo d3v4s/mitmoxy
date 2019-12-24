@@ -1,8 +1,10 @@
 import sys
 import threading
 
-from mitmoxy.core.ssl_proxy import SslProxy
-from mitmoxy.core.http_proxy import HttpProxy
+from .fake_ssl_factory import FakeSslFactory
+from .logger import Logger
+from ..model.ssl_proxy import SslProxy
+from ..model.http_proxy import HttpProxy
 
 
 class Controller:
@@ -37,8 +39,12 @@ class Controller:
 
     # method to start the servers
     def __start_server(self):
-        ssl_server = SslProxy(self.__conf_server, self.__conf_log)
-        http_server = HttpProxy(self.__conf_server, self.__conf_log)
+        # init logger and fake ssl server factory
+        # logger = Logger(self.__conf_log)
+        fake_ssl_factory = FakeSslFactory(self.__conf_log, self.__conf_server)
+
+        ssl_server = SslProxy(self.__conf_log, self.__conf_server, fake_ssl_factory)
+        http_server = HttpProxy(self.__conf_log, self.__conf_server)
         ssl_server_thread = threading.Thread(target=ssl_server.start_server)
         http_server_thread = threading.Thread(target=http_server.start_server)
         ssl_server_thread.start()

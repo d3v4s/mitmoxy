@@ -6,11 +6,8 @@ import traceback
 from abc import abstractmethod, ABC
 from .server import Server, decode_buffer
 
-from mitmoxy.controllers.logger import Logger
-
 
 class Proxy(Server, ABC):
-    _max_fails = 10
 
     #####################################
     # STATIC PROTECTED METHODS
@@ -82,7 +79,7 @@ class Proxy(Server, ABC):
 
     # method to start loop server
     def start_server(self):
-        logger = Logger(self._conf_log)
+        # logger = Logger(self._conf_log)
         cli_socket = None
         while 1:
             # create socket and start listen to it
@@ -92,17 +89,14 @@ class Proxy(Server, ABC):
                 out = traceback.format_exc()
                 out += '[!!] %s fail to listen on %s:%d\n' % (self._get_server_name(), self._address, self._port)
                 out += '[!!] Caught an exception %s\n' % str(e)
-                logger.print_err(out)
-                try:
-                    self._server_socket.close()
-                except Exception:
-                    pass
+                self._logger.print_err(out)
+                self._close_socket_pass_exc(self._server_socket)
                 self._exit_or_restart(self._server_socket)
-                logger.print('[*] Restart %s\n' % self._get_server_name())
+                self._logger.print('[*] Restart %s\n' % self._get_server_name())
                 continue
 
             # start listen and loop server
-            logger.print('[*] Start %s listen on %s:%d\n' % (self._get_server_name(), self._address, self._port))
+            self._logger.print('[*] Start %s listen on %s:%d\n' % (self._get_server_name(), self._address, self._port))
             self._server_socket.listen(5)
             while 1:
                 try:
@@ -110,14 +104,15 @@ class Proxy(Server, ABC):
                     # print connection info
                     out = '############ START CONNECTION ############\n'
                     out += '[=>] Incoming connection from %s:%d' % (cli_address, cli_port)
-                    logger.print(out)
+                    self._logger.print(out)
 
                     # start thread to communicate with client and remote host
                     proxy_thread = threading.Thread(target=self._proxy_handler, args=[cli_socket])
                     proxy_thread.start()
                 except KeyboardInterrupt:
-                    logger.print_err("[!!] Keyboard interrupt. Exit...")
-                    self._server_socket.close()
+                    self._logger.print_err("[!!] Keyboard interrupt. Exit...")
+                    self._close_socket_pass_exc(cli_socket)
+                    self._close_socket_pass_exc(self._server_socket)
                     exit()
                 except Exception as e:
                     out = ''
@@ -125,12 +120,9 @@ class Proxy(Server, ABC):
                         out += traceback.format_exc()
                         out += '\n'
                     out += '[!!] Caught an exception on Mitmoxy: %s\n' % str(e)
-                    logger.print_err(out)
-                    try:
-                        self._send_400_and_close(cli_socket)
-                    except Exception:
-                        pass
-                    self._server_socket.close()
+                    self._logger.print_err(out)
+                    self._close_socket_pass_exc(cli_socket)
+                    self._close_socket_pass_exc(self._server_socket)
                     self._exit_or_restart(-1)
-                    logger.print('[*] Restart %s' % self._get_server_name())
+                    self._logger.print('[*] Restart %s' % self._get_server_name())
                     break

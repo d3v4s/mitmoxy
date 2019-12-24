@@ -14,4 +14,4 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out s
 `
 
 Or run the generator:  
-`./keygen.sh`
+`./ck-gen.sh`

@@ -1,4 +1,5 @@
 import traceback
+
 from datetime import datetime
 from time import sleep
 
@@ -119,7 +120,7 @@ class Logger:
                     from_address[0],
                     from_address[1]
                 ))
-                from mitmoxy.core import server
+                from mitmoxy.model import server
                 self.__dec_buffer = server.decode_buffer(buffer)
                 # get bytes
                 out = self.__bytes(buffer)
