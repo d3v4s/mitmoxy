@@ -3,11 +3,6 @@
   "http-port": 8080,
   "ssl-address": "0.0.0.0",
   "ssl-port": 8888,
-  "fake-server-address": "127.0.0.1",
-  "fake-server-port": 8585,
-  "active-log": true,
-  "cert-authority-file": "conf/key/ca.crt",
-  "cert-chain-file": "conf/key/chain.crt",
   "cert-file": "conf/key/server.crt",
   "key-file": "conf/key/server.key",
   "restart-server": true

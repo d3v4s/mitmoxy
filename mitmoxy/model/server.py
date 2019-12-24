@@ -1,5 +1,7 @@
 import socket
+import ssl
 import traceback
+from _ctypes import pointer
 
 from abc import abstractmethod, ABC
 
@@ -20,15 +22,16 @@ def decode_buffer(buffer):
 
 class Server(ABC):
     _server_socket: socket.socket = None
+    _logger: Logger = None
     _conf_server = None
-    _conf_log = None
     _address = None
     _port = None
     _timeout = 0.1
+    _max_fails = 10
 
-    def __init__(self, conf_server, conf_log):
+    def __init__(self, conf_log, conf_server=None):
         self._conf_server = conf_server
-        self._conf_log = conf_log
+        self._logger = Logger(conf_log)
 
     #####################################
     # STATIC PROTECTED METHODS
@@ -60,7 +63,24 @@ class Server(ABC):
     @staticmethod
     def _send_400_and_close(sock: socket.socket):
         try:
-            sock.sendall(b'HTTP/1.1 400\r\n\r\n')
+            sock.sendall(b'HTTP/1.1 400 Bad request\r\n\r\n')
+            sock.close()
+        except Exception:
+            pass
+
+    # function to send 404 code and close socket
+    @staticmethod
+    def _send_404_and_close(sock: socket.socket):
+        try:
+            sock.sendall(b'HTTP/1.1 404 Not found\r\n\r\n')
+            sock.close()
+        except Exception:
+            pass
+
+    # function to close the socket and pass the exception
+    @staticmethod
+    def _close_socket_pass_exc(sock):
+        try:
             sock.close()
         except Exception:
             pass
@@ -83,12 +103,12 @@ class Server(ABC):
             exit(exit_code)
 
     # method that generate and return the socket
-    def _get_socket(self) -> socket.socket:
+    def _get_socket(self, ssl_wrap=False, cert_file=None, key_file=None):
         sock = self._create_bind_socket((self._address, self._port))
-        # if self._conf_server['ssl-socks']:
-        #     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        #     context.load_cert_chain(certfile=self._conf_server['cert-file'], keyfile=self._conf_server['key-file'])
-        #     return context.wrap_socket(sock, server_side=True)
+        if ssl_wrap:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+            return context.wrap_socket(sock, server_side=True)
         return sock
 
     # function to read buffer from connection
@@ -96,23 +116,20 @@ class Server(ABC):
         buffer = b''
         # set timeout
         conn.settimeout(self._timeout)
-        logger = Logger(self._conf_log)
+        # logger = Logger(self._conf_log)
         # read from socket buffer
         try:
             peer = conn.getpeername()[:2]
-            logger.print("[*] Start receive from %s:%d" % peer)
+            self._logger.print("[*] Start receive from %s:%d" % peer)
             while 1:
                 data = conn.recv(chunk_size)
                 if not data:
                     break
                 buffer += data
         except KeyboardInterrupt:
-            logger.print("[!!] Keyboard interrupt. Exit...")
-            try:
-                conn.close()
-            except Exception:
-                pass
-            self._server_socket.close()
+            self._logger.print("[!!] Keyboard interrupt. Exit...")
+            self._close_socket_pass_exc(conn)
+            self._close_socket_pass_exc(self._server_socket)
             exit()
         except Exception as e:
             # buffer = b''
@@ -127,7 +144,7 @@ class Server(ABC):
                 out += '\n'
 
             out += '[!!] Caught an exception: %s\n' % str(e)
-            logger.print(out)
+            self._logger.print(out)
             # if endpoint is disconnected return false
             if len(e.args) >= 2 and e.args[1] == 'Transport endpoint is not connected':
                 return False
@@ -143,7 +160,7 @@ class Server(ABC):
     #     pass
 
     @abstractmethod
-    def _get_server_name(self):
+    def _get_server_name(self) -> str:
         pass
 
     #####################################
@@ -154,55 +171,3 @@ class Server(ABC):
     @abstractmethod
     def start_server(self):
         pass
-        # logger = Logger(self._conf_log)
-        # cli_socket = None
-        # while 1:
-        #     # create socket and start listen to it
-        #     try:
-        #         self._server_socket = self._get_socket()
-        #     except Exception as e:
-        #         out = traceback.format_exc()
-        #         out += '[!!] %s fail to listen on %s:%d\n' % (self._get_server_name(), self._address, self._port)
-        #         out += '[!!] Caught an exception %s\n' % str(e)
-        #         logger.print_err(out)
-        #         try:
-        #             self._server_socket.close()
-        #         except Exception:
-        #             pass
-        #         self._exit_or_restart(self._server_socket)
-        #         logger.print('[*] Restart %s\n' % self._get_server_name())
-        #         continue
-        #
-        #     # start listen and loop server
-        #     logger.print('[*] Start %s listen on %s:%d\n' % (self._get_server_name(), self._address, self._port))
-        #     self._server_socket.listen()
-        #     while 1:
-        #         try:
-        #             cli_socket, (cli_address, cli_port) = self._server_socket.accept()
-        #             # print connection info
-        #             out = '############ START CONNECTION ############\n'
-        #             out += '[=>] Incoming connection from %s:%d' % (cli_address, cli_port)
-        #             logger.print(out)
-        #
-        #             # start thread to communicate with client and remote host
-        #             proxy_thread = threading.Thread(target=self._server_handler, args=[cli_socket])
-        #             proxy_thread.start()
-        #         except KeyboardInterrupt:
-        #             logger.print_err("[!!] Keyboard interrupt. Exit...")
-        #             self._server_socket.close()
-        #             exit()
-        #         except Exception as e:
-        #             out = ''
-        #             if not self._bypass_error(e):
-        #                 out += traceback.format_exc()
-        #                 out += '\n'
-        #             out += '[!!] Caught an exception on Mitmoxy: %s\n' % str(e)
-        #             logger.print_err(out)
-        #             try:
-        #                 self._send_400_and_close(cli_socket)
-        #             except Exception:
-        #                 pass
-        #             self._server_socket.close()
-        #             self._exit_or_restart(-1)
-        #             logger.print('[*] Restart %s' % self._get_server_name())
-        #             break
