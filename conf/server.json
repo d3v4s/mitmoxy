@@ -3,7 +3,5 @@
   "http-port": 8080,
   "ssl-address": "0.0.0.0",
   "ssl-port": 8888,
-  "cert-file": "conf/key/server.crt",
-  "key-file": "conf/key/server.key",
   "restart-server": true
 }

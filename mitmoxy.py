@@ -53,7 +53,7 @@ def exec_controller():
     with open('conf/log.json') as file:
         conf_log = json.load(file)
 
-    ctrl = Controller(command, conf_server, conf_log)
+    ctrl = Controller(command, conf_server)
     ctrl.execute()
 
 

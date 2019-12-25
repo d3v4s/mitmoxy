@@ -1,29 +1,26 @@
 import sys
-import threading
 
 from .fake_ssl_factory import FakeSslFactory
-from .logger import Logger
-from ..model.ssl_proxy import SslProxy
-from ..model.http_proxy import HttpProxy
+from ..core.http_proxy_thread import HttpProxyThread
+from ..core.ssl_proxy_thread import SslProxyThread
+from ..model.proxy import Proxy
 
 
 class Controller:
     __instance = None
-    __command = None
-    __conf_server = None
-    __conf_log = None
+    # __command = None
+    # __conf_server = None
 
     # singleton
-    def __new__(cls, command=None, conf_server=None, conf_log=None):
+    def __new__(cls, command=None, conf_server=None):
         return object.__new__(cls) if Controller.__instance is None else Controller.__instance
 
-    def __init__(self, command=None, conf_server=None, conf_log=None):
+    def __init__(self, command=None, conf_server=None):
         if Controller.__instance is not None:
             return
         Controller.__instance = self
         # set attributes
         self.__conf_server = conf_server
-        self.__conf_log = conf_log
         self.__command = command
         # self.__log = Logger(conf_log)
 
@@ -39,16 +36,26 @@ class Controller:
 
     # method to start the servers
     def __start_server(self):
-        # init logger and fake ssl server factory
-        # logger = Logger(self.__conf_log)
-        fake_ssl_factory = FakeSslFactory(self.__conf_log, self.__conf_server)
+        # init fake ssl server factory
+        fake_ssl_factory = FakeSslFactory()
 
-        ssl_server = SslProxy(self.__conf_log, self.__conf_server, fake_ssl_factory)
-        http_server = HttpProxy(self.__conf_log, self.__conf_server)
-        ssl_server_thread = threading.Thread(target=ssl_server.start_server)
-        http_server_thread = threading.Thread(target=http_server.start_server)
-        ssl_server_thread.start()
-        http_server_thread.start()
+        # init proxies threads
+        ssl_server = Proxy(
+            self.__conf_server['ssl-address'],
+            self.__conf_server['ssl-port'],
+            self.__conf_server['restart-server'],
+            SslProxyThread,
+            "SSL proxy"
+        )
+        http_server = Proxy(
+            self.__conf_server['http-address'],
+            self.__conf_server['http-port'],
+            self.__conf_server['restart-server'],
+            HttpProxyThread,
+            "HTTP proxy"
+        )
+        ssl_server.start()
+        http_server.start()
 
     #####################################
     # PUBLIC METHODS
