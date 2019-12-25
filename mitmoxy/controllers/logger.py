@@ -1,5 +1,5 @@
-import traceback
-
+from ..utils.functions import get_conf, decode_buffer
+from traceback import format_exc
 from datetime import datetime
 from time import sleep
 
@@ -19,7 +19,10 @@ class Logger:
         if Logger.__instance is not None:
             return
         Logger.__instance = self
-        self.__conf_log = conf_log
+        if conf_log is None:
+            self.__conf_log = get_conf("conf/log.json")
+        else:
+            self.__conf_log = conf_log
 
     #####################################
     # PRIVATE METHODS
@@ -88,6 +91,9 @@ class Logger:
     def __save_log_address(self, from_address, log):
         pass
 
+    def __save_log_err(self, error):
+        pass
+
     def __save_log(self, log):
         pass
 
@@ -120,8 +126,7 @@ class Logger:
                     from_address[0],
                     from_address[1]
                 ))
-                from mitmoxy.model import server
-                self.__dec_buffer = server.decode_buffer(buffer)
+                self.__dec_buffer = decode_buffer(buffer)
                 # get bytes
                 out = self.__bytes(buffer)
                 # get content
@@ -132,7 +137,7 @@ class Logger:
                 self.__stdo_print(out)
                 self.__save_log_address(from_address, out)
             except Exception as e:
-                print(traceback.format_exc())
+                print(format_exc())
                 print("[!!] An exception was caught while running buffer logging: %s" % str(e))
             finally:
                 self._unlock()
@@ -146,7 +151,7 @@ class Logger:
                 self.__stdo_print(content)
                 self.__save_log(content)
             except Exception as e:
-                print(traceback.format_exc())
+                print(format_exc())
                 print("[!!] Caught an exception while logging: %s" % str(e))
             finally:
                 self._unlock()
@@ -156,9 +161,9 @@ class Logger:
         if self.__try_lock():
             try:
                 print(err)
-                self.__save_log(err)
+                self.__save_log_err(err)
             except Exception as e:
-                print(traceback.format_exc())
+                print(format_exc())
                 print("[!!] Caught an exception while logging the error: %s" % str(e))
             finally:
                 self._unlock()

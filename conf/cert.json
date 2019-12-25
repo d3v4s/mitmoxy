@@ -1,0 +1,11 @@
+{
+  "auto-generate": false,
+  "def-bits": 2048,
+  "country-name": "US",
+  "state-province": "California",
+  "locality": "San Francisco",
+  "organization-name": "Mitmoxy",
+  "organization-unit-name": "Mitmoxy Dev",
+  "common-name": "mitmoxy.dev",
+  "email-address": "hack@mitmoxy.dev"
+}
