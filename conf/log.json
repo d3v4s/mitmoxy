@@ -2,6 +2,6 @@
   "log-dir": "log",
   "hex-dump": false,
   "bytes": true,
-  "content": false,
+  "content": true,
   "print-stdo": true
 }
