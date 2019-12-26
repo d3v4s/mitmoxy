@@ -9,8 +9,8 @@ from ssl import SSLSocket
 
 class FakeSslProxy(Proxy):
 
-    def __init__(self, server_name, remote_address):
-        Proxy.__init__(self, "127.0.0.1", None, False, None, server_name)
+    def __init__(self, remote_address):
+        Proxy.__init__(self, "127.0.0.1", None, None, "Fake SSL Server Proxy (%s:%d)" % remote_address, False)
         self.__remote_address = remote_address
         self.__from_port = 4000
         self.__to_port = 9000
@@ -38,7 +38,7 @@ class FakeSslProxy(Proxy):
                 return sock
             except Exception:
                 continue
-        raise Exception("Free port for fake SSL server not found")
+        raise Exception("Free port for %s server not found" % self._server_name)
 
     #####################################
     # PUBLIC METHODS
@@ -48,6 +48,8 @@ class FakeSslProxy(Proxy):
         self.ready = False
         close_socket_pass_exc(self._server_socket)
 
+    # method to get the tuple that represent
+    # the server address (host and port)
     def get_address(self) -> tuple:
         return self._address, self._port
 
@@ -66,7 +68,7 @@ class FakeSslProxy(Proxy):
             return
 
         # start listen and loop server
-        self._logger.print('[*] Start %s listen on %s:%d\n' % (self._server_name, self._address, self._port))
+        self._logger.print_conn('[*] Start %s listen on %s:%d\n' % (self._server_name, self._address, self._port))
         self._server_socket.listen()
         self.ready = True
         while self.ready:
@@ -74,12 +76,16 @@ class FakeSslProxy(Proxy):
                 cli_socket, cli_address = self._server_socket.accept()
                 cli_address = cli_address[:2]
                 # print connection info
-                out = '############ START CONNECTION ############\n'
-                out += '[=>] Incoming connection from %s:%d' % cli_address
-                self._logger.print(out)
+                self._logger.print_conn('[=>] Local client connect to %s' % self._server_name)
 
                 # start thread to communicate with client and remote host
-                proxy_thread = FakeSslThread(cli_socket, cli_address, self._server_socket, self.__remote_address)
+                proxy_thread = FakeSslThread(
+                    cli_socket,
+                    cli_address,
+                    self._server_socket,
+                    self.__remote_address,
+                    self._server_name
+                )
                 proxy_thread.start()
             except KeyboardInterrupt:
                 self._logger.print_err("[!!] Keyboard interrupt. Exit...")
@@ -87,11 +93,11 @@ class FakeSslProxy(Proxy):
                 exit()
             except Exception as e:
                 out = '' if bypass_error(e) else format_exc()
-                out += '[!!] Caught an exception on Mitmoxy: %s\n' % str(e)
+                out += '[!!] Caught an exception on %s: %s\n' % (self._server_name, str(e))
                 self._logger.print_err(out)
                 # break
 
         # close all sockets
-        self._logger.print('[*] Close %s on %s:%d\n' % (self._server_name, self._address, self._port))
+        self._logger.print_conn('[*] Close %s\n' % self._server_name)
         close_socket_pass_exc(cli_socket)
         close_socket_pass_exc(self._server_socket)

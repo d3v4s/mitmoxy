@@ -11,15 +11,16 @@ from threading import Thread
 
 class ProxyThread(Thread, ABC):
 
-    def __init__(self, cli_socket, cli_address, server_socket):
+    def __init__(self, cli_socket, cli_address, server_socket, server_name):
         Thread.__init__(self)
         self._cli_socket = cli_socket
         self._cli_address = cli_address
         self._server_socket = server_socket
+        self._server_name = server_name
         self._logger = Logger()
-        self._max_fails = 10
+        self._max_fails = 2
         self._timeout = 0.1
-        # self._server_name
+        self.name = "%s handler thread - Client: %s:%d" % (server_name, cli_address[0], cli_address[1])
 
     #####################################
     # STATIC PROTECTED METHODS
@@ -36,7 +37,6 @@ class ProxyThread(Thread, ABC):
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             context.load_default_certs(purpose=ssl.Purpose.SERVER_AUTH)
             # connect to remote
-            # remote_socket = socket.create_connection(address)
             remote_socket.connect(address)
             # wrap socket on ssl context and return it
             return context.wrap_socket(remote_socket, server_hostname=address[0])
@@ -86,26 +86,21 @@ class ProxyThread(Thread, ABC):
         try:
             # set timeout
             conn.settimeout(self._timeout)
-            self._logger.print("[*] Start receive from %s:%d" % address)
+            # self._logger.print("[*] Start receive from %s:%d" % address)
             while 1:
                 data = conn.recv(chunk_size)
                 if not data:
                     break
                 buffer += data
         except KeyboardInterrupt:
-            self._logger.print("[!!] Keyboard interrupt. Exit...")
+            self._logger.print_err("[!!] Keyboard interrupt. Exit...")
             close_socket_pass_exc(conn)
             close_socket_pass_exc(self._server_socket)
             exit()
         except Exception as e:
             out = '' if bypass_error(e) else format_exc()
-            out += '[!!] Fail receive data'
-            try:
-                out += 'from %s:%d\n' % address
-            except Exception:
-                out += '\n'
-
-            out += '[!!] Caught an exception: %s\n' % str(e)
+            out += '[!!] Fail receive data from %s:%d\n' % address
+            out += '[!!] Caught an exception on %s: %s\n' % (self.name, str(e))
             self._logger.print_err(out)
             # if endpoint is disconnected return false
             if len(e.args) >= 2 and e.args[1] == 'Transport endpoint is not connected':

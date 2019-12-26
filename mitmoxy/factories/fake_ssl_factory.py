@@ -1,6 +1,6 @@
-from .logger import Logger
 from .fake_cert_factory import FakeCertFactory
-from ..model.fake_ssl_proxy import FakeSslProxy
+from ..controllers.logger import Logger
+from ..models.fake_ssl_proxy import FakeSslProxy
 from json import load as json_load
 
 
@@ -20,5 +20,5 @@ class FakeSslFactory:
 
     def get_fake_ssl(self, remote_address: tuple) -> FakeSslProxy:
         self.__fake_cert_factory.generate_certificate(remote_address[0])
-        fake_ssl = FakeSslProxy("Fake SSL Server (%s)" % remote_address[0], remote_address)
+        fake_ssl = FakeSslProxy(remote_address)
         return fake_ssl

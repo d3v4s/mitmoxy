@@ -6,9 +6,10 @@ from traceback import format_exc
 
 class FakeSslThread(ProxyThread):
 
-    def __init__(self, cli_socket, cli_address, server_socket, remote_address):
-        ProxyThread.__init__(self, cli_socket, cli_address, server_socket)
+    def __init__(self, cli_socket, cli_address, server_socket, remote_address, server_name):
+        ProxyThread.__init__(self, cli_socket, cli_address, server_socket, server_name)
         self.__remote_address = remote_address
+        self.name = "%s handler thread" % server_name
 
     #####################################
     # PRIVATE METHODS
@@ -30,17 +31,16 @@ class FakeSslThread(ProxyThread):
     def run(self) -> None:
         remote_socket = None
         try:
-            # get host and port of client
-            # cli_socket. = cli_socket.getpeername()
             # get remote socket
             remote_socket = self._get_remote_socket(self.__remote_address, True)
         except Exception as e:
             close_socket_pass_exc(self._cli_socket)
             close_socket_pass_exc(remote_socket)
             out = '' if bypass_error(e) else format_exc()
-            out += "[!!] Caught a exception on proxy: %s" % str(e)
+            out += "[!!] Caught a exception on %s: %s" % (self.name, str(e))
             self._logger.print_err(out)
             return
+
         fail = 0
         # loop to route requests and responses
         # between client and remote host
@@ -52,16 +52,15 @@ class FakeSslThread(ProxyThread):
             if isinstance(local_buffer, bool) and not local_buffer:
                 close_socket_pass_exc(remote_socket)
                 close_socket_pass_exc(self._cli_socket)
-                out = "[!!] Client %s:%d is disconnected\n" % self._cli_address
-                out += "'############ END CONNECTION ############\n'"
-                self._logger.print(out)
+
+                self._logger.print("[*] Local client is disconnected to %s\n" % self.name)
                 return
 
             # if receive data from client
             if len(local_buffer):
                 fail = 0
 
-                # change reques with handler and log it
+                # change request with handler and log it
                 local_buffer = self.__req_handler(local_buffer)
                 self._logger.log_buffer(self._cli_address, local_buffer, True)
 
@@ -75,9 +74,7 @@ class FakeSslThread(ProxyThread):
             if isinstance(remote_buffer, bool) and not remote_buffer:
                 close_socket_pass_exc(remote_socket)
                 close_socket_pass_exc(self._cli_socket)
-                out = "[!!] Remote %s:%d is disconnected\n" % self.__remote_address
-                out += "'############ END CONNECTION ############\n'"
-                self._logger.print(out)
+                self._logger.print_conn("[*] Remote %s:%d is disconnected\n" % self.__remote_address)
                 return
 
             # if receive data from remote
@@ -96,9 +93,7 @@ class FakeSslThread(ProxyThread):
                 fail += 1
                 # if fails too many times close connections
                 if fail >= self._max_fails:
-                    out = "[!!] Fails to many times!!! Close connection with %s:%d client\n" % self._cli_address
-                    out += '############ END CONNECTION ############\n'
-                    self._logger.print(out)
+                    self._logger.print_err("[!!] %s fails to many times!!! Close connections\n" % self.name)
                     close_socket_pass_exc(remote_socket)
                     close_socket_pass_exc(self._cli_socket)
                     return
