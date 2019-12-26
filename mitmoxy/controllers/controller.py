@@ -1,9 +1,9 @@
 import sys
 
-from .fake_ssl_factory import FakeSslFactory
+from mitmoxy.factories.fake_ssl_factory import FakeSslFactory
 from ..core.http_proxy_thread import HttpProxyThread
 from ..core.ssl_proxy_thread import SslProxyThread
-from ..model.proxy import Proxy
+from ..models.proxy import Proxy
 
 
 class Controller:
@@ -43,16 +43,16 @@ class Controller:
         ssl_server = Proxy(
             self.__conf_server['ssl-address'],
             self.__conf_server['ssl-port'],
-            self.__conf_server['restart-server'],
             SslProxyThread,
-            "SSL proxy"
+            "SSL proxy",
+            self.__conf_server['restart-server']
         )
         http_server = Proxy(
             self.__conf_server['http-address'],
             self.__conf_server['http-port'],
-            self.__conf_server['restart-server'],
             HttpProxyThread,
-            "HTTP proxy"
+            "HTTP proxy",
+            self.__conf_server['restart-server']
         )
         ssl_server.start()
         http_server.start()

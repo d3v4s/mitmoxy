@@ -5,8 +5,8 @@ from traceback import format_exc
 
 
 class HttpProxyThread(ProxyThread):
-    def __init__(self, cli_socket, cli_address, server_socket):
-        ProxyThread.__init__(self, cli_socket, cli_address, server_socket)
+    def __init__(self, cli_socket, cli_address, server_socket, server_name):
+        ProxyThread.__init__(self, cli_socket, cli_address, server_socket, server_name)
 
     #####################################
     # PRIVATE METHODS
@@ -40,9 +40,7 @@ class HttpProxyThread(ProxyThread):
                 if isinstance(local_buffer, bool) and not local_buffer:
                     close_socket_pass_exc(self._cli_socket)
                     close_socket_pass_exc(remote_socket)
-                    out = "[!!] Client %s:%d is disconnected\n" % self._cli_address
-                    out += '############ END CONNECTION ############\n'
-                    self._logger.print(out)
+                    self._logger.print_conn("[!!] Client %s:%d is disconnected\n" % self._cli_address)
                     return
 
                 if len(local_buffer):
@@ -51,31 +49,22 @@ class HttpProxyThread(ProxyThread):
                     # change request with handler
                     local_buffer = self.__req_handler(local_buffer)
 
-                    # get host and port remote and create socket
-                    new_addr = self._get_remote_address(local_buffer)
-                    # if not (remote_address[0] == new_addr[0] and remote_address[1] == new_addr[1]) \
-                    #         or remote_address is None:
                     if remote_address is None:
-                        # close old socket for new connection
-                        close_socket_pass_exc(remote_socket)
-                        remote_address = new_addr
+                        # get host and port remote and create socket
+                        remote_address = self._get_remote_address(local_buffer)
                         remote_socket = self._get_remote_socket(remote_address)
 
-                # send data at remote host
-                if remote_socket is not None:
-                    # logger.print('[=>] Sent request to %s:%d' % (remote_host, remote_port))
+                    # send data at remote host
                     remote_socket.sendall(local_buffer)
 
+                if remote_socket is not None:
                     # receive response from remote
                     remote_buffer = self._receive_from(remote_socket, remote_address)
-
                     # if remote is disconnect close connection and return
                     if isinstance(remote_buffer, bool) and not remote_buffer:
                         close_socket_pass_exc(self._cli_socket)
                         close_socket_pass_exc(remote_socket)
-                        out = "[!!] Remote %s:%d is disconnected\n" % remote_address[:2]
-                        out += '############ END CONNECTION ############\n'
-                        self._logger.print(out)
+                        self._logger.print_conn("[!!] Remote %s:%d is disconnected\n" % remote_address)
                         return
 
                     # if have data from remote log it and send response to client
@@ -86,20 +75,17 @@ class HttpProxyThread(ProxyThread):
                         remote_buffer = self.__resp_handler(remote_buffer)
 
                         # send response to client
-                        self._logger.print('[<=] Send response to %s:%d' % self._cli_address)
                         self._cli_socket.sendall(remote_buffer)
 
                 # if there are no other data close the connections
                 if not (len(remote_buffer) or len(local_buffer)):
                     close_socket_pass_exc(self._cli_socket)
                     close_socket_pass_exc(remote_socket)
-                    out = '[*] No more data. Closing connection with client %s:%d\n' % self._cli_address
-                    out += '############ END CONNECTION ############\n'
-                    self._logger.print(out)
+                    self._logger.print_conn('[*] No more data. Closing connection with client %s:%d\n' % self._cli_address)
                     break
         except Exception as e:
             close_socket_pass_exc(self._cli_socket)
             out = '' if bypass_error(e) else format_exc()
-            out += "[!!] Caught a exception on proxy: %s" % str(e)
+            out += "[!!] Caught a exception on %s: %s" % (self.name, str(e))
             self._logger.print_err(out)
             return

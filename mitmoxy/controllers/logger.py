@@ -97,6 +97,9 @@ class Logger:
     def __save_log(self, log):
         pass
 
+    def __save_log_conn(self, log):
+        pass
+
     # function to try lock
     def __try_lock(self) -> bool:
         while 1:
@@ -165,5 +168,16 @@ class Logger:
             except Exception as e:
                 print(format_exc())
                 print("[!!] Caught an exception while logging the error: %s" % str(e))
+            finally:
+                self._unlock()
+
+    def print_conn(self, log: str):
+        if self.__try_lock():
+            try:
+                print(log)
+                self.__save_log_conn(log)
+            except Exception as e:
+                print(format_exc())
+                print("[!!] Caught an exception while logging the connection: %s" % str(e))
             finally:
                 self._unlock()

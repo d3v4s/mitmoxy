@@ -1,15 +1,15 @@
 import ssl
 
-from threading import Thread
 from ..controllers.logger import Logger
 from ..utils.socket import close_socket_pass_exc, create_bind_socket
 from ..utils.functions import bypass_error
 from traceback import format_exc
+from threading import Thread
 
 
 class Proxy(Thread):
 
-    def __init__(self, address, port, restart, proxy_handle_class, server_name):
+    def __init__(self, address, port, proxy_handle_class, server_name, restart=True):
         Thread.__init__(self)
         self._proxy_thread = proxy_handle_class
         self._server_name = server_name
@@ -18,8 +18,7 @@ class Proxy(Thread):
         self._restart = restart
         self._logger = Logger()
         self._server_socket = None
-        self._timeout = 0.1
-        self._max_fails = 10
+        self.name = server_name
 
     #####################################
     # PROTECTED METHODS
@@ -54,7 +53,7 @@ class Proxy(Thread):
             except Exception as e:
                 out = '' if bypass_error(e) else format_exc()
                 out += '[!!] %s fail to listen on %s:%d\n' % (self._server_name, self._address, self._port)
-                out += '[!!] Caught an exception %s\n' % str(e)
+                out += '[!!] Caught an exception on %s %s\n' % (self._server_name, str(e))
                 self._logger.print_err(out)
                 close_socket_pass_exc(self._server_socket)
                 self._exit_or_restart(self._server_socket)
@@ -69,12 +68,10 @@ class Proxy(Thread):
                     cli_socket, cli_address = self._server_socket.accept()
                     cli_address = cli_address[:2]
                     # print connection info
-                    out = '############ START CONNECTION ############\n'
-                    out += '[=>] Incoming connection from %s:%d' % cli_address
-                    self._logger.print(out)
+                    self._logger.print_conn('[=>] Incoming connection from %s:%d\n' % cli_address)
 
                     # start thread to communicate with client and remote host
-                    proxy_thread = self._proxy_thread(cli_socket, cli_address, self._server_socket)
+                    proxy_thread = self._proxy_thread(cli_socket, cli_address, self._server_socket, self._server_name)
                     proxy_thread.start()
                 except KeyboardInterrupt:
                     self._logger.print_err("[!!] Keyboard interrupt. Exit...")
@@ -83,10 +80,11 @@ class Proxy(Thread):
                     exit()
                 except Exception as e:
                     out = '' if bypass_error(e) else format_exc()
-                    out += '[!!] Caught an exception on Mitmoxy: %s\n' % str(e)
+                    out += '[!!] Caught an exception on %s: %s\n' \
+                           '[!!] Shutdown server!!!\n' % (self._server_name, str(e))
                     self._logger.print_err(out)
                     close_socket_pass_exc(cli_socket)
                     close_socket_pass_exc(self._server_socket)
                     self._exit_or_restart(-1)
-                    self._logger.print('[*] Restart %s' % self._server_name)
+                    self._logger.print('[*] Restart %s\n' % self._server_name)
                     break

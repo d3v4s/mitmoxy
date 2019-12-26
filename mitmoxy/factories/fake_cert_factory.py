@@ -1,5 +1,6 @@
 import os
 from ipaddress import ip_address
+from threading import Thread
 
 
 class FakeCertFactory:
@@ -8,6 +9,10 @@ class FakeCertFactory:
 
     def __init__(self, cert_conf):
         self.__cert_conf = cert_conf
+
+    #####################################
+    # PRIVATE STATIC METHODS
+    #####################################
 
     # method to check if is ip address or domain
     # and get the alt name for the certificate
@@ -18,6 +23,10 @@ class FakeCertFactory:
             return "IP.1=%s" % host
         except ValueError:
             return "DNS.1=%s" % host
+
+    #####################################
+    # PRIVATE METHODS
+    #####################################
 
     # method to get the parameter of certificate
     def __get_cert_parameter(self, host):
@@ -32,6 +41,10 @@ class FakeCertFactory:
             "email_address": self.__cert_conf['email-address'],
             "alt_names": self.__get_alt_names(host)
         }
+
+    #####################################
+    # PUBLIC METHODS
+    #####################################
 
     # method to generate certificate
     def generate_certificate(self, host):
@@ -60,3 +73,8 @@ class FakeCertFactory:
         os.system("cd conf/key && ./fake-cert-generator.sh %s %d > /dev/null" % (host, self.__cert_conf['def-bits']))
         # delete csr configuration file
         os.remove(csr_conf_path)
+
+    # method to generate a certificate with thread
+    def generate_certificate_thread(self, host):
+        thread = Thread(target=self.generate_certificate, args=[host])
+        thread.start()

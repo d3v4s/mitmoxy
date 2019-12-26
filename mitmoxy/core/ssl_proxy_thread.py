@@ -1,29 +1,21 @@
 from .proxy_thread import ProxyThread
-from ..controllers.fake_ssl_factory import FakeSslFactory
+from ..factories.fake_ssl_factory import FakeSslFactory
 from ..utils.functions import decode_buffer, bypass_error
 from ..utils.socket import close_socket_pass_exc, send_404_and_close
-from ..model.fake_ssl_proxy import FakeSslProxy
+from ..models.fake_ssl_proxy import FakeSslProxy
 from traceback import format_exc
 from time import sleep
 
 
 class SslProxyThread(ProxyThread):
 
-    def __init__(self, cli_socket, cli_address, server_socket):
-        ProxyThread.__init__(self, cli_socket, cli_address, server_socket)
+    def __init__(self, cli_socket, cli_address, server_socket, server_name):
+        ProxyThread.__init__(self, cli_socket, cli_address, server_socket, server_name)
         self.__fake_ssl_factory = FakeSslFactory()
 
     #####################################
     # PRIVATE METHODS
     #####################################
-
-    # handler to change a request
-    def __req_handler(self, buffer: bytes) -> bytes:
-        return buffer
-
-    # handler to change a response
-    def __resp_handler(self, buffer: bytes) -> bytes:
-        return buffer
 
     # function to wait the ready of fake ssl server
     @staticmethod
@@ -37,7 +29,6 @@ class SslProxyThread(ProxyThread):
 
     # method to manage the negotiation with client
     def _client_negotiation(self):
-        self._logger.print('############ START CLIENT NEGOTIATION ############')
         fail = 0
         while 1:
             # receive data from client
@@ -49,23 +40,17 @@ class SslProxyThread(ProxyThread):
                     self._cli_socket.close()
                 except Exception:
                     pass
-                out = "[!!] Client %s:%d is disconnected\n" % self._cli_address
-                out += '############ END CONNECTION ############\n'
-                self._logger.print(out)
-                raise Exception("Client disconnected")
+                # out = "[!!] Client %s:%d is disconnected\n" % self._cli_address
+                # out += '############ END CONNECTION ############\n'
+                # self._logger.print(out)
+                raise Exception("Client %s:%d disconnected from %s" %
+                                (self._cli_address[0], self._cli_address[1], self.name))
 
             if len(local_buffer):
-                # log request
-                # self._logger.log_buffer(cli_address, local_buffer, True)
-
                 # if request type isn't CONNECT send bad request code
                 if decode_buffer(local_buffer)[:7] != 'CONNECT':
                     self._cli_socket.sendall(b'HTTP/1.1 400 Bad Request\r\n\r\n')
                     raise Exception("Error while negotiation with the client. Bad request from client!!!")
-
-                self._logger.print('[*] CONNECT request from %s:%d' % self._cli_address)
-                # change request with handler
-                local_buffer = self.__req_handler(local_buffer)
 
                 # get host and port remote
                 remote_address = self._get_remote_address(local_buffer)
@@ -77,16 +62,11 @@ class SslProxyThread(ProxyThread):
                     self._logger.print_err("[!!] Error while get remote socket: %s" % str(e))
                     return False
 
-                # create a socket with fake ssl server
-                fake_ssl_server = self.__fake_ssl_factory.get_fake_ssl(remote_address)
                 # send negotiation confirm
                 conf_buff = b'HTTP/1.1 200 Connection established\r\n\r\n'
-                self._logger.print('[*] Send confirm negotiation at %s:%d' % self._cli_address)
-                # self._logger.log_buffer((self._address, self._port), conf_buff, False)
                 self._cli_socket.sendall(conf_buff)
-
-                self._logger.print('############ END CLIENT NEGOTIATION ############\n')
-                return fake_ssl_server  # , remote_address
+                # create a socket with fake ssl server and return it
+                return self.__fake_ssl_factory.get_fake_ssl(remote_address)
             # increment fails and check max
             fail += 1
             if fail >= self._max_fails:
@@ -115,7 +95,7 @@ class SslProxyThread(ProxyThread):
         except Exception as e:
             send_404_and_close(self._cli_socket)
             out = '' if bypass_error(e) else format_exc()
-            out += "[!!] Caught a exception on proxy: %s" % str(e)
+            out += "[!!] Caught a exception %s: %s" % (self.name, str(e))
             self._logger.print_err(out)
             return
 
@@ -130,9 +110,7 @@ class SslProxyThread(ProxyThread):
                 close_socket_pass_exc(self._cli_socket)
                 close_socket_pass_exc(fake_ssl_socket)
                 fake_ssl_server.shutdown()
-                out = "[!!] Client %s:%d is disconnected\n" % self._cli_address
-                out += '############ END CONNECTION ############\n'
-                self._logger.print(out)
+                self._logger.print_conn("[!!] Client %s:%d is disconnected\n" % self._cli_address)
                 return
 
             if len(local_buffer):
@@ -148,9 +126,7 @@ class SslProxyThread(ProxyThread):
                 close_socket_pass_exc(self._cli_socket)
                 close_socket_pass_exc(fake_ssl_socket)
                 fake_ssl_server.shutdown()
-                out = "[!!] Fake server is disconnected\n"
-                out += '############ END CONNECTION ############\n'
-                self._logger.print(out)
+                self._logger.print_conn("[!!] Fake server is disconnected\n")
                 return
 
             if len(remote_buffer):
@@ -163,8 +139,8 @@ class SslProxyThread(ProxyThread):
                 fail += 1
                 # if fails too many times close connections
                 if fail >= self._max_fails:
-                    out = "[!!] Fails to many times!!! Close connection with %s:%d client\n" % self._cli_address
-                    out += '############ END CONNECTION ############\n'
+                    out = '[!!] %s fails to many times!!!\n' % self.name
+                    out += '[!!] Close connections of %s\n' % self._server_name
                     self._logger.print_err(out)
                     close_socket_pass_exc(self._cli_socket)
                     close_socket_pass_exc(fake_ssl_socket)
