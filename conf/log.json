@@ -2,8 +2,9 @@
   "log-dir": "log",
   "req": true,
   "resp": false,
-  "hex-dump": false,
+  "hex-dump": true,
   "bytes": false,
   "content": true,
-  "print-stdo": true
+  "print-stdo": true,
+  "conn": true
 }

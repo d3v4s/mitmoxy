@@ -23,20 +23,19 @@ def bypass_error(e: Exception):
     if len(e.args) < 1:
         return False
 
-    # bypass timeout exceptions and port not found
+    # bypass timeout exceptions, fail too many time, and port not found
     if e.args[0] == 'timed out' or \
             e.args[0] == 'The read operation timed out' or \
             e.args[0] == 'Wait fake SSL server fail too many time' or \
             e.args[0] == 'Free port for fake SSL server not found':
         return True
 
-    # bypass ssl exceptions and endpoint not connected
+    # bypass ssl exceptions
     if len(e.args) >= 2 and (e.args[1] == '[SSL: SSLV3_ALERT_BAD_CERTIFICATE] sslv3 alert bad certificate '
                                           '(_ssl.c:1076)' or
                              e.args[1] == '[SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1076)' or
                              e.args[1] == '[SSL: HTTPS_PROXY_REQUEST] https proxy request (_ssl.c:1076)' or
-                             e.args[1] == '[SSL: HTTP_REQUEST] http request (_ssl.c:1076)' or
-                             e.args[1] == 'Transport endpoint is not connected'):
+                             e.args[1] == '[SSL: HTTP_REQUEST] http request (_ssl.c:1076)'):
         return True
 
     return False

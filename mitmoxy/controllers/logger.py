@@ -121,7 +121,7 @@ class Logger:
     # function to log the buffer
     # implement a lock
     def log_buffer(self, from_address, buffer: bytes, is_cli):
-        if self.__try_lock():
+        if ((is_cli and self.__conf_log['req']) or (not is_cli and self.__conf_log['resp'])) and self.__try_lock():
             try:
                 self.__stdo_print('[%s] Received %d bytes from %s:%d' % (
                     "=>" if is_cli else "<=",
@@ -163,6 +163,7 @@ class Logger:
     def print_err(self, err: str):
         if self.__try_lock():
             try:
+                print("[%s]" % datetime.now())
                 print(err)
                 self.__save_log_err(err)
             except Exception as e:
@@ -172,8 +173,9 @@ class Logger:
                 self._unlock()
 
     def print_conn(self, log: str):
-        if self.__try_lock():
+        if self.__conf_log['conn'] and self.__try_lock():
             try:
+                print("[%s]" % datetime.now())
                 print(log)
                 self.__save_log_conn(log)
             except Exception as e:

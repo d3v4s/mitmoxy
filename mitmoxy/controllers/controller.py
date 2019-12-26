@@ -3,25 +3,25 @@ import sys
 from mitmoxy.factories.fake_ssl_factory import FakeSslFactory
 from ..core.http_proxy_thread import HttpProxyThread
 from ..core.ssl_proxy_thread import SslProxyThread
+from ..models.cert_server import CertServer
 from ..models.proxy import Proxy
 
 
 class Controller:
     __instance = None
-    # __command = None
-    # __conf_server = None
 
     # singleton
-    def __new__(cls, command=None, conf_server=None):
+    def __new__(cls, command=None, conf_server=None, cert_server_conf=None):
         return object.__new__(cls) if Controller.__instance is None else Controller.__instance
 
-    def __init__(self, command=None, conf_server=None):
+    def __init__(self, command=None, conf_server=None, cert_server_conf=None):
         if Controller.__instance is not None:
             return
         Controller.__instance = self
         # set attributes
         self.__conf_server = conf_server
         self.__command = command
+        self.__cert_server_conf = cert_server_conf
         # self.__log = Logger(conf_log)
 
     #####################################
@@ -56,6 +56,14 @@ class Controller:
         )
         ssl_server.start()
         http_server.start()
+
+        if self.__cert_server_conf['active']:
+            cert_server = CertServer(
+                self.__cert_server_conf['address'],
+                self.__cert_server_conf['port'],
+                self.__cert_server_conf['cert-path']
+            )
+            cert_server.start()
 
     #####################################
     # PUBLIC METHODS

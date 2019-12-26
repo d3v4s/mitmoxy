@@ -9,9 +9,10 @@ from ssl import SSLSocket
 
 class FakeSslProxy(Proxy):
 
-    def __init__(self, remote_address):
+    def __init__(self, remote_address, cli_address):
         Proxy.__init__(self, "127.0.0.1", None, None, "Fake SSL Server Proxy (%s:%d)" % remote_address, False)
         self.__remote_address = remote_address
+        self.__cli_address = cli_address
         self.__from_port = 4000
         self.__to_port = 9000
         self.ready = False

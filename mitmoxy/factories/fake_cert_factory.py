@@ -70,7 +70,7 @@ class FakeCertFactory:
 
         # GENERATE THE FAKE CERTIFICATE AND KEY
         # call bash script generator
-        os.system("cd conf/key && ./fake-cert-generator.sh %s %d > /dev/null" % (host, self.__cert_conf['def-bits']))
+        os.system("cd conf/key && ./fake-cert-generator.sh %s %d" % (host, self.__cert_conf['def-bits']))
         # delete csr configuration file
         os.remove(csr_conf_path)
 
