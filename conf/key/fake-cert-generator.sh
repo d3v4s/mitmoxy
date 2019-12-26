@@ -14,9 +14,6 @@ CSR="fake-gen/$DOMAIN.csr"
 CRT="fake-gen/$DOMAIN.crt"
 CONF="fake-gen/$DOMAIN.conf"
 
-echo "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
-pwd
-echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
 # generate key and certificate with openssl
 openssl genrsa -out "$KEY" "$BYTES" && openssl req -new -key "$KEY" -out "$CSR" -config "$CONF" && \
 openssl x509 -req -in "$CSR" -CA ca.crt -CAkey ca.key -CAcreateserial -out "$CRT" -days 365 -extensions v3_req -extfile "$CONF"
