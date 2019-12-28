@@ -18,7 +18,6 @@ class Controller:
         # set attributes
         self.__conf_server = conf_server
         self.__command = command
-        # self.__log = Logger(conf_log)
 
     #####################################
     # PRIVATE METHODS
@@ -32,8 +31,6 @@ class Controller:
 
     # method to start the servers
     def __start_server(self):
-        # init fake ssl factory
-        # ssl_factory = FakeSslFactory()
         # init proxy thread
         proxy = Proxy(
             self.__conf_server['address'],
