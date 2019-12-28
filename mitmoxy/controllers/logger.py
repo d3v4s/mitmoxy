@@ -1,15 +1,14 @@
+from queue import Queue
+from threading import Thread
+
 from ..utils.functions import get_conf, decode_buffer
 from traceback import format_exc
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 
 class Logger:
     __instance = None
-    __conf_log = None
-    __lock_timeout = 3
-    __lock = False
-    __dec_buffer = None
 
     # singleton
     def __new__(cls, conf_log=None):
@@ -19,14 +18,26 @@ class Logger:
         if Logger.__instance is not None:
             return
         Logger.__instance = self
+
         if conf_log is None:
             self.__conf_log = get_conf("conf/log.json")
         else:
             self.__conf_log = conf_log
 
+        self.__dec_buffer = None
+        self.__log_queue = Queue()
+        self.active = True
+        logger_thread = Thread(target=self.__start_logger)
+        logger_thread.start()
+
     #####################################
     # PRIVATE METHODS
     #####################################
+
+    def __start_logger(self):
+        while self.active:
+            function, param = self.__log_queue.get()
+            function(param)
 
     # function to print out in stdo
     def __stdo_print(self, out):
@@ -75,8 +86,6 @@ class Logger:
         if not self.__conf_log['content']:
             return ''
 
-        # buffer = server.decode_buffer(buffer)
-        # buffer =
         res = [
             '',
             '############ START CONTENT ############',
@@ -97,31 +106,12 @@ class Logger:
     def __save_log(self, log):
         pass
 
-    def __save_log_conn(self, log):
-        pass
-
-    # function to try lock
-    def __try_lock(self) -> bool:
-        while 1:
-            # try to lock
-            if not self.__lock:
-                # lock and return
-                self.__lock = True
-                return True
-            sleep(0.1)
-
-    # function to unlock
-    def _unlock(self):
-        self.__lock = False
-
-    #####################################
-    # PUBLIC METHODS
-    #####################################
-
     # function to log the buffer
-    # implement a lock
-    def log_buffer(self, from_address, buffer: bytes, is_cli):
-        if self.__try_lock():
+    def __log_buffer(self, args: list):  # from_address, buffer: bytes, is_cli):
+        from_address = args[0]
+        buffer = args[1]
+        is_cli = args[2]
+        if (is_cli and self.__conf_log['req']) or (not is_cli and self.__conf_log['resp']):  # and self.__try_lock():
             try:
                 self.__stdo_print('[%s] Received %d bytes from %s:%d' % (
                     "=>" if is_cli else "<=",
@@ -142,42 +132,58 @@ class Logger:
             except Exception as e:
                 print(format_exc())
                 print("[!!] An exception was caught while running buffer logging: %s" % str(e))
-            finally:
-                self._unlock()
 
     # function to check if print in
     # stdo (standard output) is enable,
     # and write on log
-    def print(self, content: str):
-        if self.__try_lock():
-            try:
-                self.__stdo_print(content)
-                self.__save_log(content)
-            except Exception as e:
-                print(format_exc())
-                print("[!!] Caught an exception while logging: %s" % str(e))
-            finally:
-                self._unlock()
+    def __print(self, args: list):
+        try:
+            content = args[0]
+            self.__stdo_print(content)
+            self.__save_log(content)
+        except Exception as e:
+            print(format_exc())
+            print("[!!] Caught an exception while logging: %s" % str(e))
 
-    # function to print error on stdo and write on log
-    def print_err(self, err: str):
-        if self.__try_lock():
-            try:
-                print(err)
-                self.__save_log_err(err)
-            except Exception as e:
-                print(format_exc())
-                print("[!!] Caught an exception while logging the error: %s" % str(e))
-            finally:
-                self._unlock()
+    # function to print error and write on log
+    def __print_err(self, args: list):
+        try:
+            err = args[0]
+            print("[%s]" % datetime.now())
+            print(err)
+            self.__save_log_err(err)
+        except Exception as e:
+            print(format_exc())
+            print("[!!] Caught an exception while logging the error: %s" % str(e))
 
-    def print_conn(self, log: str):
-        if self.__try_lock():
+    # function to print connection info and write it on log
+    def __print_conn(self, args: list):
+        if self.__conf_log['conn']:
             try:
+                log = args[0]
+                print("[%s]" % datetime.now())
                 print(log)
-                self.__save_log_conn(log)
+                self.__save_log(log)
             except Exception as e:
                 print(format_exc())
                 print("[!!] Caught an exception while logging the connection: %s" % str(e))
-            finally:
-                self._unlock()
+
+    #####################################
+    # PUBLIC METHODS
+    #####################################
+
+    # function to add print log buffer on log queue
+    def log_buffer(self, from_address, buffer: bytes, is_cli):
+        self.__log_queue.put((self.__log_buffer, [from_address, buffer, is_cli]))
+
+    # function to add simple print on log queue
+    def print(self, content: str):
+        self.__log_queue.put((self.__print, [content]))
+
+    # function to add print error on log queue
+    def print_err(self, err: str):
+        self.__log_queue.put((self.__print_err, [err]))
+
+    # function to add print connection on log queue
+    def print_conn(self, log: str):
+        self.__log_queue.put((self.__print_conn, [log]))

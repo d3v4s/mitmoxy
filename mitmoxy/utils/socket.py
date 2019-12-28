@@ -1,4 +1,17 @@
 import socket
+import ssl
+
+
+# function that generate and return the socket
+def get_bind_socket(address: tuple, ssl_wrap=False, cert_file=None, key_file=None):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(address)
+    if ssl_wrap:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        return context.wrap_socket(sock, server_side=True)
+    return sock
 
 
 # function to send 404 code and close socket
@@ -25,11 +38,3 @@ def close_socket_pass_exc(sock):
         sock.close()
     except Exception:
         pass
-
-
-# function to bind socket at address
-def create_bind_socket(address: tuple):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(address)
-    return sock

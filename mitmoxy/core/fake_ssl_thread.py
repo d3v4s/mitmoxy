@@ -1,27 +1,16 @@
-from .proxy_thread import ProxyThread
+from .proxy_thread_abc import ProxyThreadABC
 from ..utils.functions import bypass_error
 from ..utils.socket import close_socket_pass_exc
+from ..utils.handlers import *
 from traceback import format_exc
 
 
-class FakeSslThread(ProxyThread):
+class FakeSslThreadABC(ProxyThreadABC):
 
     def __init__(self, cli_socket, cli_address, server_socket, remote_address, server_name):
-        ProxyThread.__init__(self, cli_socket, cli_address, server_socket, server_name)
+        ProxyThreadABC.__init__(self, cli_socket, cli_address, server_socket, server_name)
         self.__remote_address = remote_address
         self.name = "%s handler thread" % server_name
-
-    #####################################
-    # PRIVATE METHODS
-    #####################################
-
-    # handler to change a request
-    def __req_handler(self, buffer: bytes) -> bytes:
-        return buffer
-
-    # handler to change a response
-    def __resp_handler(self, buffer: bytes) -> bytes:
-        return buffer
 
     #####################################
     # PUBLIC METHODS
@@ -61,7 +50,7 @@ class FakeSslThread(ProxyThread):
                 fail = 0
 
                 # change request with handler and log it
-                local_buffer = self.__req_handler(local_buffer)
+                local_buffer = req_handle(local_buffer)
                 self._logger.log_buffer(self._cli_address, local_buffer, True)
 
                 # send data at remote host
@@ -82,7 +71,7 @@ class FakeSslThread(ProxyThread):
                 fail = 0
 
                 # change response with handler and log it
-                remote_buffer = self.__resp_handler(remote_buffer)
+                remote_buffer = resp_handle(remote_buffer)
                 self._logger.log_buffer(self.__remote_address, remote_buffer, False)
 
                 # send response to client

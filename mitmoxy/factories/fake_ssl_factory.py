@@ -1,6 +1,7 @@
 from .fake_cert_factory import FakeCertFactory
 from ..controllers.logger import Logger
 from ..models.fake_ssl_proxy import FakeSslProxy
+from ..utils.functions import fake_certificate_exists
 from json import load as json_load
 
 
@@ -18,7 +19,9 @@ class FakeSslFactory:
         conf_file = open("conf/cert.json", 'r')
         return json_load(conf_file)
 
-    def get_fake_ssl(self, remote_address: tuple) -> FakeSslProxy:
-        self.__fake_cert_factory.generate_certificate(remote_address[0])
-        fake_ssl = FakeSslProxy(remote_address)
+    def get_fake_ssl(self, remote_address: tuple, cli_address) -> FakeSslProxy:
+        if not fake_certificate_exists(remote_address[0]):
+            self.__fake_cert_factory.generate_certificate(remote_address[0])
+
+        fake_ssl = FakeSslProxy(remote_address, cli_address)
         return fake_ssl
