@@ -5,6 +5,7 @@ import json
 import mitmoxy
 
 from mitmoxy.controllers.controller import Controller
+from mitmoxy.utils.functions import get_conf
 
 helpers = """
 Bitoxy {version} -- Proxy Server
@@ -47,9 +48,9 @@ def show_version():
 
 # function to execute controller
 def exec_controller():
-    with open('conf/server.json') as file:
-        conf_server = json.load(file)
-
+    # get server configurations
+    conf_server = get_conf('conf/server.json')
+    # init controller and execute it
     ctrl = Controller(command, conf_server)
     ctrl.execute()
 

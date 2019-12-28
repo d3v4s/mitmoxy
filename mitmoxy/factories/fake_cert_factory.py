@@ -62,7 +62,7 @@ class FakeCertFactory:
 
         # GENERATE CONFIGURATION FILE FOR CSR (CERTIFICATE SIGNING REQUEST)
         # read template
-        file = open('template/cert/csr.conf', 'r')
+        file = open('%s/csr.conf' % self.__fake_gen_dir, 'r')
         csr_conf = file.read()
         file.close()
         # set parameter on template

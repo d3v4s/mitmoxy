@@ -1,11 +1,11 @@
 [Unit]
-Description=Bitoxy {version} - Proxy server
+Description=Mitmoxy {version} - HTTP/HTTPS MITM Proxy server
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory={workdir}
-ExecStart=/usr/bin/bitoxy start
+ExecStart=/usr/bin/mitmoxy start
 Restart=no
 
 [Install]
