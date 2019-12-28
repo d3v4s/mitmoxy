@@ -50,10 +50,7 @@ def exec_controller():
     with open('conf/server.json') as file:
         conf_server = json.load(file)
 
-    with open('conf/cert-server.json') as file:
-        conf_cert_server = json.load(file)
-
-    ctrl = Controller(command, conf_server, conf_cert_server)
+    ctrl = Controller(command, conf_server)
     ctrl.execute()
 
 

@@ -10,7 +10,7 @@ from threading import Thread
 
 class ProxyThreadABC(Thread, ABC):
 
-    def __init__(self, cli_socket, cli_address, server_socket, server_name):
+    def __init__(self, cli_socket: socket.socket, cli_address, server_socket: socket.socket, server_name):
         Thread.__init__(self)
         self._cli_socket = cli_socket
         self._cli_address = cli_address
@@ -40,6 +40,7 @@ class ProxyThreadABC(Thread, ABC):
             return context.wrap_socket(remote_socket, server_hostname=address[0])
 
         # else connect to remote and return the socket
+        print("REMOTE: " + str(address))
         remote_socket.connect(address)
         return remote_socket
 
