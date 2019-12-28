@@ -1,5 +1,8 @@
 {
   "address": "0.0.0.0",
   "port": 8080,
-  "restart-server": true
+  "restart-server": true,
+  "mitmoxy-cert-download": true,
+  "cert-address": "mitmoxy.crt",
+  "cert-path": "conf/key/ca.crt"
 }

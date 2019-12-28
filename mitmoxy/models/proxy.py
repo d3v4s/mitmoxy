@@ -8,7 +8,7 @@ from threading import Thread
 
 class Proxy(Thread):
 
-    def __init__(self, address, port, server_name, restart):
+    def __init__(self, address, port, server_name, restart: bool):
         Thread.__init__(self)
         self.name = self.__server_name = server_name
         self.__address = address

@@ -1,10 +1,6 @@
 import sys
 
-# from mitmoxy.factories.fake_ssl_factory import FakeSslFactory
-# from ..core.http_proxy_thread import HttpProxyThread
-# from ..core.ssl_proxy_thread import SslProxyThread
-from ..factories.fake_ssl_factory import FakeSslFactory
-from ..models.cert_server import CertServer
+from ..core.proxy_thread import ProxyThread
 from ..models.proxy import Proxy
 
 
@@ -12,17 +8,16 @@ class Controller:
     __instance = None
 
     # singleton
-    def __new__(cls, command=None, conf_server=None, cert_server_conf=None):
+    def __new__(cls, command=None, conf_server=None):
         return object.__new__(cls) if Controller.__instance is None else Controller.__instance
 
-    def __init__(self, command=None, conf_server=None, cert_server_conf=None):
+    def __init__(self, command=None, conf_server=None):
         if Controller.__instance is not None:
             return
         Controller.__instance = self
         # set attributes
         self.__conf_server = conf_server
         self.__command = command
-        self.__cert_server_conf = cert_server_conf
         # self.__log = Logger(conf_log)
 
     #####################################
@@ -31,7 +26,7 @@ class Controller:
 
     # method for invalid command
     def __invalid_command(self):
-        print('[!!] Invalid command ' + str(self.__command))
+        print('[!!] Invalid command %s' % str(self.__command))
         print('[!!] Show the help with "{name} help"'.format(name=sys.argv[0]))
         sys.exit(1)
 
@@ -47,15 +42,13 @@ class Controller:
             "Mitmoxy proxy",
             self.__conf_server['restart-server']
         )
-        proxy.start()
 
-        if self.__cert_server_conf['active']:
-            cert_server = CertServer(
-                self.__cert_server_conf['address'],
-                self.__cert_server_conf['port'],
-                self.__cert_server_conf['cert-path']
-            )
-            cert_server.start()
+        if self.__conf_server['mitmoxy-cert-download']:
+            ProxyThread.cert_download = self.__conf_server['mitmoxy-cert-download']
+            ProxyThread.cert_address = self.__conf_server['cert-address']
+            ProxyThread.cert_file_path = self.__conf_server['cert-path']
+
+        proxy.start()
 
     #####################################
     # PUBLIC METHODS
