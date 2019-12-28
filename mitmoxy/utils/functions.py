@@ -1,3 +1,6 @@
+import os
+
+
 # function to decode the buffer
 def decode_buffer(buffer):
     enc_type = ['utf-8', 'utf-16', 'ascii', 'ISO-8859-1']
@@ -15,6 +18,19 @@ def get_conf(file_conf):
     from json import load
     with open(file_conf) as file:
         return load(file)
+
+
+# get cert and key path and return if already exists
+def fake_certificate_exists(host):
+    fake_dir = "conf/key/fake-gen"
+    if not os.path.exists(fake_dir):
+        os.makedirs(fake_dir)
+
+    cert_path = "%s/%s.crt" % (fake_dir, host)
+    key_path = "%s/%s.key" % (fake_dir, host)
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        return True   # , (cert_path, key_path)
+    return False    # , (cert_path, key_path)
 
 
 # function to check if bypass the error

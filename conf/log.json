@@ -2,7 +2,7 @@
   "log-dir": "log",
   "req": true,
   "resp": false,
-  "hex-dump": true,
+  "hex-dump": false,
   "bytes": false,
   "content": true,
   "print-stdo": true,

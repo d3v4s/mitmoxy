@@ -1,14 +1,20 @@
 import os
+
+from ..utils.functions import fake_certificate_exists
 from ipaddress import ip_address
 from threading import Thread
+from queue import Queue
 
 
 class FakeCertFactory:
     __fake_gen_dir = "conf/key/fake-gen"
-    __cert_conf = None
+    __cert_req_queue = Queue()
+    __run = True
 
     def __init__(self, cert_conf):
         self.__cert_conf = cert_conf
+        thread_factory = Thread(target=self.__start_factory)
+        thread_factory.start()
 
     #####################################
     # PRIVATE STATIC METHODS
@@ -28,6 +34,12 @@ class FakeCertFactory:
     # PRIVATE METHODS
     #####################################
 
+    # method to start certificate factory
+    def __start_factory(self):
+        while FakeCertFactory.__run:
+            host = self.__cert_req_queue.get()
+            self.__create_certificate(host)
+
     # method to get the parameter of certificate
     def __get_cert_parameter(self, host):
         return {
@@ -42,16 +54,10 @@ class FakeCertFactory:
             "alt_names": self.__get_alt_names(host)
         }
 
-    #####################################
-    # PUBLIC METHODS
-    #####################################
-
     # method to generate certificate
-    def generate_certificate(self, host):
-        # get cert and key path and return if already exists
-        cert_path = "%s/%s.crt" % (FakeCertFactory.__fake_gen_dir, host)
-        key_path = "%s/%s.key" % (FakeCertFactory.__fake_gen_dir, host)
-        if os.path.exists(cert_path) and os.path.exists(key_path):
+    def __create_certificate(self, host):
+        # return if certificate already exist
+        if fake_certificate_exists(host):
             return
 
         # GENERATE CONFIGURATION FILE FOR CSR (CERTIFICATE SIGNING REQUEST)
@@ -74,7 +80,10 @@ class FakeCertFactory:
         # delete csr configuration file
         os.remove(csr_conf_path)
 
+    #####################################
+    # PUBLIC METHODS
+    #####################################
+
     # method to generate a certificate with thread
-    def generate_certificate_thread(self, host):
-        thread = Thread(target=self.generate_certificate, args=[host])
-        thread.start()
+    def generate_certificate(self, host):
+        self.__cert_req_queue.put(host)

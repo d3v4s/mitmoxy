@@ -1,8 +1,9 @@
 import sys
 
-from mitmoxy.factories.fake_ssl_factory import FakeSslFactory
-from ..core.http_proxy_thread import HttpProxyThread
-from ..core.ssl_proxy_thread import SslProxyThread
+# from mitmoxy.factories.fake_ssl_factory import FakeSslFactory
+# from ..core.http_proxy_thread import HttpProxyThread
+# from ..core.ssl_proxy_thread import SslProxyThread
+from ..factories.fake_ssl_factory import FakeSslFactory
 from ..models.cert_server import CertServer
 from ..models.proxy import Proxy
 
@@ -36,26 +37,17 @@ class Controller:
 
     # method to start the servers
     def __start_server(self):
-        # init fake ssl server factory
-        fake_ssl_factory = FakeSslFactory()
-
-        # init proxies threads
-        ssl_server = Proxy(
-            self.__conf_server['ssl-address'],
-            self.__conf_server['ssl-port'],
-            SslProxyThread,
-            "SSL proxy",
+        # init fake ssl factory
+        # ssl_factory = FakeSslFactory()
+        # init proxy thread
+        proxy = Proxy(
+            self.__conf_server['address'],
+            self.__conf_server['port'],
+            # SslProxyThread,
+            "Mitmoxy proxy",
             self.__conf_server['restart-server']
         )
-        http_server = Proxy(
-            self.__conf_server['http-address'],
-            self.__conf_server['http-port'],
-            HttpProxyThread,
-            "HTTP proxy",
-            self.__conf_server['restart-server']
-        )
-        ssl_server.start()
-        http_server.start()
+        proxy.start()
 
         if self.__cert_server_conf['active']:
             cert_server = CertServer(
