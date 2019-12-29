@@ -77,7 +77,7 @@ def install():
         # copy file on installation path
         os.makedirs(install_path)
         for f in install_files:
-            to = '/'.join([install_path, f])
+            to = '%s/%s' % (install_path, f)
             if os.path.isfile(f):
                 copy(f, to)
             else:
@@ -85,7 +85,7 @@ def install():
 
         # add execution permission
         for f in exec_files:
-            os.system("chmod +x {path}/{file}".format(path=install_path, file=f))
+            os.system("chmod +x %s/%s" % (install_path, f))
 
         # change log directory
         path = '/'.join([install_path, 'conf', 'log.json'])
@@ -121,7 +121,7 @@ def install():
         print('[*] Files copied')
 
         # create symbolic link on /usr/bin to mitmoxy
-        os.symlink('/'.join([install_path, "mitmoxy.sh"]), symlink_bin)
+        os.symlink('%s/%s' % (install_path, "mitmoxy.sh"), symlink_bin)
         # create symlink on /etc/chissy to conf
         os.symlink('%s/%s' % (install_path, 'conf'), symlink_etc)
         print('[*] Symbolic links created')
